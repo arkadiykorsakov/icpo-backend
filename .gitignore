@@ -1,0 +1,55 @@
+# Бинарные файлы
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+/bin/
+/dist/
+/build/
+/main
+/app
+/server
+
+# Go
+*.prof
+*.cover
+*.coverprofile
+coverage.txt
+coverage.out
+
+# Переменные окружения
+.env
+.env.*
+!.env.example
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Логи
+*.log
+logs/
+
+# Базы данных
+*.db
+*.sqlite
+*.sqlite3
+
+# Временные файлы
+tmp/
+temp/
+*.tmp
+
+# Docker
+docker-compose.override.yml
+
+# OS
+Thumbs.db
+desktop.ini

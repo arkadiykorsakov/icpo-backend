@@ -1,0 +1,32 @@
+openapi: 3.0.3
+info:
+  title: ICPO Backend API
+  description: HTTP API сервиса icpo-backend.
+  version: 0.1.0
+servers:
+  - url: /
+    description: Текущий хост
+tags:
+  - name: system
+    description: Служебные эндпоинты
+paths:
+  /health:
+    get:
+      tags:
+        - system
+      summary: Проверка здоровья сервиса
+      description: Возвращает статус доступности сервиса.
+      operationId: health
+      responses:
+        '200':
+          description: Сервис доступен
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                required:
+                  - status
