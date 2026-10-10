@@ -3,7 +3,7 @@ package handlers
 import (
 	"net/http"
 
-	"icpo-backend/docs"
+	"icpo-backend/api/v1"
 )
 
 // Swagger UI подгружается с CDN, поэтому для открытия страницы нужен доступ в интернет.
@@ -29,16 +29,16 @@ const swaggerUIPage = `<!DOCTYPE html>
 </body>
 </html>`
 
-func swaggerUIHandler(w http.ResponseWriter, _ *http.Request) {
+func SwaggerUI(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_, _ = w.Write([]byte(swaggerUIPage))
 }
 
-func openAPIHandler(w http.ResponseWriter, _ *http.Request) {
+func OpenAPI(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/yaml; charset=utf-8")
-	_, _ = w.Write(docs.OpenAPI)
+	_, _ = w.Write(v1.OpenAPI)
 }
 
-func swaggerRedirect(w http.ResponseWriter, r *http.Request) {
+func SwaggerRedirect(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/swagger/", http.StatusMovedPermanently)
 }

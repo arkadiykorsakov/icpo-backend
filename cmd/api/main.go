@@ -9,10 +9,10 @@ import (
 	"os/signal"
 	"time"
 
-	"icpo-backend/internal/adapter/database"
+	"icpo-backend/internal/api/routes"
 	"icpo-backend/internal/config"
-	"icpo-backend/internal/handlers"
-	"icpo-backend/internal/migrator"
+	"icpo-backend/internal/infrastructure/database"
+	"icpo-backend/internal/infrastructure/database/migrator"
 )
 
 func main() {
@@ -43,7 +43,7 @@ func run() error {
 
 	srv := &http.Server{
 		Addr:              cfg.HTTPAddr,
-		Handler:           handlers.NewRouter(),
+		Handler:           routes.NewRouter(),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 

@@ -10,7 +10,7 @@ tags:
   - name: system
     description: Служебные эндпоинты
 paths:
-  /health:
+  /api/v1/health:
     get:
       tags:
         - system

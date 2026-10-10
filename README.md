@@ -14,14 +14,14 @@ cp .env.example .env
 docker compose up -d postgres
  
 # 3. Запустить сервер (миграции применятся автоматически)
-go run ./cmd/server
+go run ./cmd/api
 ```
 
 Проверка, что всё работает:
 
 ```bash
-curl http://localhost:8080/health
-# {"status":"ok","checks":{"database":"ok"}}
+curl http://localhost:8080/api/v1/health
+# {"status":"ok"}
 ```
 
 Документация API (Swagger UI): <http://localhost:8080/swagger/>
@@ -31,7 +31,7 @@ curl http://localhost:8080/health
 Сборка бинарника:
 
 ```bash
-go build -o bin/server ./cmd/server
+go build -o bin/api ./cmd/api
 ```
 
 ## Конфигурация
@@ -127,7 +127,7 @@ goose -dir migrations postgres "postgres://admin:admin@localhost:5432/icpo_db?ss
 ```
 
 3. Примените к базе одним из способов:
-    - **Запустить сервер** — `go run ./cmd/server`; миграция применится на старте.
+    - **Запустить сервер** — `go run ./cmd/api`; миграция применится на старте.
     - **Через CLI**, не запуская сервер: `goose -dir migrations up`.
 4. Проверьте результат:
 ```bash
@@ -181,5 +181,5 @@ rm migrations/20261009120000_create_users_table.sql
 ```bash
 docker compose down -v
 docker compose up -d postgres
-go run ./cmd/server
+go run ./cmd/api
 ```
