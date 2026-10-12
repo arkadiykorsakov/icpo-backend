@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-func respondWithJSON(w http.ResponseWriter, statusCode int, payload any) {
+func RespondWithJSON(w http.ResponseWriter, statusCode int, payload any) {
 	data, err := json.Marshal(payload)
 	if err != nil {
 		slog.Error("marshal response", "err", err)
@@ -23,7 +23,7 @@ func respondWithJSON(w http.ResponseWriter, statusCode int, payload any) {
 	}
 }
 
-func respondWithError(w http.ResponseWriter, code int, errorMsg string) {
+func RespondWithError(w http.ResponseWriter, code int, errorMsg string) {
 	if code > 499 {
 		slog.Error("server error", "msg", errorMsg)
 	}
@@ -32,5 +32,5 @@ func respondWithError(w http.ResponseWriter, code int, errorMsg string) {
 		Error string `json:"error"`
 	}
 
-	respondWithJSON(w, code, errorResponse{Error: errorMsg})
+	RespondWithJSON(w, code, errorResponse{Error: errorMsg})
 }

@@ -9,6 +9,8 @@ import (
 	"os/signal"
 	"time"
 
+	healthHandler "icpo-backend/internal/api/handlers/health"
+	swaggerHandler "icpo-backend/internal/api/handlers/swagger"
 	"icpo-backend/internal/api/routes"
 	"icpo-backend/internal/config"
 	"icpo-backend/internal/infrastructure/database"
@@ -41,9 +43,17 @@ func run() error {
 	}
 	defer pool.Close()
 
+	healthH := healthHandler.NewHandler()
+	swaggerH := swaggerHandler.NewHandler()
+
+	router := routes.NewRouter(routes.Deps{
+		Health:  healthH,
+		Swagger: swaggerH,
+	})
+
 	srv := &http.Server{
 		Addr:              cfg.HTTPAddr,
-		Handler:           routes.NewRouter(),
+		Handler:           router,
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
