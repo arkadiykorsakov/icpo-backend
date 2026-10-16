@@ -2,13 +2,18 @@ package config
 
 import (
 	"fmt"
-	"github.com/joho/godotenv"
 	"os"
+	"time"
+
+	"github.com/joho/godotenv"
 )
 
 type Config struct {
 	HTTPAddr    string
 	DatabaseURL string
+	JWTSecret   string
+	AccessTTL   time.Duration
+	RefreshTTL  time.Duration
 }
 
 func Load() (*Config, error) {
@@ -17,6 +22,19 @@ func Load() (*Config, error) {
 	cfg := &Config{
 		HTTPAddr:    getEnv("HTTP_ADDR", ":8080"),
 		DatabaseURL: buildDSN(),
+		JWTSecret:   os.Getenv("JWT_SECRET"),
+	}
+
+	if cfg.JWTSecret == "" {
+		return nil, fmt.Errorf("JWT_SECRET is required")
+	}
+
+	var err error
+	if cfg.AccessTTL, err = parseDuration("JWT_ACCESS_TTL", "15m"); err != nil {
+		return nil, err
+	}
+	if cfg.RefreshTTL, err = parseDuration("JWT_REFRESH_TTL", "720h"); err != nil {
+		return nil, err
 	}
 
 	return cfg, nil
@@ -39,4 +57,12 @@ func buildDSN() string {
 		getEnv("POSTGRES_DB", "postgres"),
 		getEnv("POSTGRES_SSLMODE", "disable"),
 	)
+}
+
+func parseDuration(key, def string) (time.Duration, error) {
+	d, err := time.ParseDuration(getEnv(key, def))
+	if err != nil {
+		return 0, fmt.Errorf("invalid %s: %w", key, err)
+	}
+	return d, nil
 }
