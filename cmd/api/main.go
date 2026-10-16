@@ -9,8 +9,16 @@ import (
 	"os/signal"
 	"time"
 
+	authHandler "icpo-backend/internal/api/handlers/auth"
+	healthHandler "icpo-backend/internal/api/handlers/health"
+	swaggerHandler "icpo-backend/internal/api/handlers/swagger"
+	testAuthHandler "icpo-backend/internal/api/handlers/test-auth"
+	"icpo-backend/internal/api/middleware"
 	"icpo-backend/internal/api/routes"
 	"icpo-backend/internal/config"
+	authDomain "icpo-backend/internal/domain/auth"
+	tokenDomain "icpo-backend/internal/domain/token"
+	userDomain "icpo-backend/internal/domain/user"
 	"icpo-backend/internal/infrastructure/database"
 	"icpo-backend/internal/infrastructure/database/migrator"
 )
@@ -41,9 +49,36 @@ func run() error {
 	}
 	defer pool.Close()
 
+	userRepo := userDomain.NewRepository(pool)
+	tokenRepo := tokenDomain.NewRepository(pool)
+
+	tokenSvc := tokenDomain.NewService(tokenRepo, tokenDomain.Config{
+		AccessTTL:  cfg.AccessTTL,
+		RefreshTTL: cfg.RefreshTTL,
+		JWTSecret:  cfg.JWTSecret,
+	})
+	authSvc := authDomain.NewService(
+		userRepo,
+		tokenSvc,
+	)
+
+	healthH := healthHandler.NewHandler()
+	swaggerH := swaggerHandler.NewHandler()
+	authH := authHandler.NewHandler(authSvc)
+	testAuthH := testAuthHandler.NewHandler()
+	authMiddleware := middleware.Authenticate(tokenSvc)
+
+	router := routes.NewRouter(routes.Deps{
+		Health:       healthH,
+		Swagger:      swaggerH,
+		Auth:         authH,
+		TestAuth:     testAuthH,
+		Authenticate: authMiddleware,
+	})
+
 	srv := &http.Server{
 		Addr:              cfg.HTTPAddr,
-		Handler:           routes.NewRouter(),
+		Handler:           router,
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
