@@ -4,13 +4,12 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"strings"
 
 	"icpo-backend/internal/api/handlers"
 	"icpo-backend/internal/api/handlers/auth/dto"
-	errs "icpo-backend/internal/errors"
 	tokenDto "icpo-backend/internal/domain/token/dto"
 	userDomain "icpo-backend/internal/domain/user"
+	errs "icpo-backend/internal/errors"
 	"icpo-backend/pkg/validator"
 )
 
@@ -34,22 +33,17 @@ func (h *handler) Register(w http.ResponseWriter, r *http.Request) {
 	if err := handlers.DecodeJSONBody(w, r, &input); err != nil {
 		return
 	}
-	if errs := validator.ValidateRequest(input); errs != nil {
-		handlers.RespondWithValidationErrors(w, dto.ToValidationErrorsResponse(errs))
+	if verrs := validator.ValidateRequest(input); verrs != nil {
+		handlers.RespondWithValidationErrors(w, verrs)
 		return
 	}
 
-	user, err := h.service.Register(
-		r.Context(),
-		strings.ToLower(strings.TrimSpace(input.Email)),
-		input.Name,
-		input.Password,
-	)
+	user, err := h.service.Register(r.Context(), input.Email, input.Name, input.Password)
 	if err != nil {
 		switch {
 		case errors.Is(err, errs.ErrEmailTaken):
 			handlers.RespondWithValidationErrors(w, map[string][]string{
-				"email": {errs.ErrEmailTaken.Error()},
+				"email": {err.Error()},
 			})
 		default:
 			handlers.RespondWithServerError(w, err)
@@ -66,8 +60,8 @@ func (h *handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if errs := validator.ValidateRequest(input); errs != nil {
-		handlers.RespondWithValidationErrors(w, dto.ToValidationErrorsResponse(errs))
+	if verrs := validator.ValidateRequest(input); verrs != nil {
+		handlers.RespondWithValidationErrors(w, verrs)
 		return
 	}
 
@@ -82,6 +76,7 @@ func (h *handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	handlers.SetNoStore(w)
 	handlers.RespondWithJSON(w, http.StatusOK, pair)
 }
 
@@ -108,6 +103,7 @@ func (h *handler) Refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	handlers.SetNoStore(w)
 	handlers.RespondWithJSON(w, http.StatusOK, pair)
 }
 

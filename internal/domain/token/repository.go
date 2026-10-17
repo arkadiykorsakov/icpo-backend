@@ -101,12 +101,3 @@ func (r *repository) RevokeAllForUser(ctx context.Context, userID int64, at time
 	_, err := r.db.Exec(ctx, query, at, userID)
 	return err
 }
-
-func (r *repository) DeleteExpired(ctx context.Context, before time.Time) (int64, error) {
-	const query = `DELETE FROM refresh_tokens WHERE expires_at < $1`
-	tag, err := r.db.Exec(ctx, query, before)
-	if err != nil {
-		return 0, err
-	}
-	return tag.RowsAffected(), nil
-}

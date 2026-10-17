@@ -6,12 +6,14 @@ import (
 	"icpo-backend/internal/api/middleware"
 )
 
+type Middleware = func(http.Handler) http.Handler
+
 type Deps struct {
 	Health       HealthHandler
 	Swagger      SwaggerHandler
 	Auth         AuthHandler
 	TestAuth     TestAuthHandler
-	Authenticate func(http.Handler) http.Handler
+	Authenticate Middleware
 }
 
 func NewRouter(d Deps) http.Handler {

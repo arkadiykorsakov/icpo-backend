@@ -57,7 +57,7 @@ func RespondWithValidationErrors(w http.ResponseWriter, validationErrs map[strin
 	})
 }
 
-func DecodeJSONBody(w http.ResponseWriter, r *http.Request, dst interface{}) error {
+func DecodeJSONBody(w http.ResponseWriter, r *http.Request, dst any) error {
 	defer r.Body.Close()
 
 	if err := json.NewDecoder(r.Body).Decode(dst); err != nil {
@@ -65,4 +65,10 @@ func DecodeJSONBody(w http.ResponseWriter, r *http.Request, dst interface{}) err
 		return err
 	}
 	return nil
+}
+
+// SetNoStore запрещает кэширование ответа (RFC 6749 §5.1 — для ответов с токенами).
+func SetNoStore(w http.ResponseWriter) {
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Pragma", "no-cache")
 }

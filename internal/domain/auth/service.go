@@ -3,14 +3,20 @@ package auth
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"golang.org/x/crypto/bcrypt"
 
-	errs "icpo-backend/internal/errors"
 	tokenDto "icpo-backend/internal/domain/token/dto"
 	userDomain "icpo-backend/internal/domain/user"
+	errs "icpo-backend/internal/errors"
 	"icpo-backend/internal/utils"
 )
+
+// dummyHash — валидный bcrypt-хеш (cost 10 = bcrypt.DefaultCost) случайного пароля.
+// Используется в Login для несуществующего пользователя, чтобы время ответа не
+// отличалось от случая «пользователь есть, пароль неверный».
+const dummyHash = "$2b$10$GcGeDzte1Kj4pJA.3klmsuSbncEYzdX1PMfKtQQ6JW90Elh29VDAW"
 
 type UserRepository interface {
 	Create(ctx context.Context, email, name, passwordHash string) (*userDomain.User, error)
@@ -34,6 +40,7 @@ func NewService(userRepo UserRepository, tokenSvc TokenService) *service {
 
 func (s *service) Register(ctx context.Context, email, name, password string) (*userDomain.User, error) {
 	email = utils.NormalizeEmail(email)
+	name = strings.TrimSpace(name)
 
 	if existing, err := s.userRepo.GetByEmail(ctx, email); err != nil && !errors.Is(err, errs.ErrUserNotFound) {
 		return nil, err
@@ -54,6 +61,7 @@ func (s *service) Login(ctx context.Context, email, password string) (*tokenDto.
 
 	user, err := s.userRepo.GetByEmail(ctx, email)
 	if errors.Is(err, errs.ErrUserNotFound) {
+		_ = bcrypt.CompareHashAndPassword([]byte(dummyHash), []byte(password))
 		return nil, errs.ErrInvalidCredentials
 	}
 	if err != nil {
