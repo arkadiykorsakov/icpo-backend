@@ -1,7 +1,7 @@
 package health
 
 import (
-    "net/http"
+	"net/http"
 
 	"icpo-backend/internal/api/handlers"
 )

@@ -34,6 +34,7 @@ curl http://localhost:8080/api/v1/health
 go build -o bin/api ./cmd/api
 ```
 
+
 ## Конфигурация
 
 Значения берутся из переменных окружения. Если в рабочей директории есть файл `.env`, он подгружается автоматически. Образец — `.env.example`.
@@ -47,6 +48,9 @@ go build -o bin/api ./cmd/api
 | `POSTGRES_USER`     | `postgres`   | Пользователь                              |
 | `POSTGRES_PASSWORD` | _(пусто)_    | Пароль                                    |
 | `POSTGRES_SSLMODE`  | `disable`    | Режим SSL (`disable`, `require`, ...)     |
+| `JWT_SECRET`        | _(обязательна)_ | Секрет для подписи access-токенов (HS256); без него сервер не запустится |
+| `JWT_ACCESS_TTL`    | `15m`        | Время жизни access-токена                 |
+| `JWT_REFRESH_TTL`   | `720h`       | Время жизни refresh-токена                |
 
 Строка подключения собирается из `POSTGRES_*`:
 `postgres://USER:PASSWORD@HOST:PORT/DB?sslmode=SSLMODE`.
