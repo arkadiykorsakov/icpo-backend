@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"icpo-backend/internal/api/authctx"
-	"icpo-backend/internal/api/handlers"
+	"icpo-backend/internal/api/httpx"
 	errs "icpo-backend/internal/errors"
 )
 
@@ -15,11 +15,11 @@ func NewHandler() *handler { return &handler{} }
 func (h *handler) TestAuth(w http.ResponseWriter, r *http.Request) {
 	userID, ok := authctx.UserID(r.Context())
 	if !ok {
-		handlers.RespondWithServerError(w, errs.ErrUserIDMissing)
+		httpx.ServerError(w, errs.ErrUserIDMissing)
 		return
 	}
 
-	handlers.RespondWithJSON(w, http.StatusOK, map[string]any{
+	httpx.JSON(w, http.StatusOK, map[string]any{
 		"user_id": userID,
 	})
 }

@@ -3,7 +3,7 @@ package health
 import (
 	"net/http"
 
-	"icpo-backend/internal/api/handlers"
+	"icpo-backend/internal/api/httpx"
 )
 
 type handler struct{}
@@ -13,5 +13,5 @@ func NewHandler() *handler {
 }
 
 func (h *handler) Check(w http.ResponseWriter, r *http.Request) {
-	handlers.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	httpx.JSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }

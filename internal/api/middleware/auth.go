@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"icpo-backend/internal/api/authctx"
-	"icpo-backend/internal/api/handlers"
+	"icpo-backend/internal/api/httpx"
 	tokenDomain "icpo-backend/internal/domain/token"
 )
 
@@ -53,5 +53,5 @@ func extractBearerToken(authorization string) (string, bool) {
 
 func unauthorized(w http.ResponseWriter) {
 	w.Header().Set("WWW-Authenticate", `Bearer realm="api"`)
-	handlers.RespondWithUnauthorizedError(w)
+	httpx.Unauthorized(w)
 }
