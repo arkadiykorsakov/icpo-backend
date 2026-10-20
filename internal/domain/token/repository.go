@@ -81,23 +81,23 @@ func (r *repository) Rotate(
 	return rotated, nil
 }
 
-func (r *repository) Revoke(ctx context.Context, tokenHash string, at time.Time) (bool, error) {
+func (r *repository) Revoke(ctx context.Context, tokenHash string) (bool, error) {
 	const query = `
 		UPDATE refresh_tokens
-		SET revoked_at = $1
-		WHERE token_hash = $2 AND revoked_at IS NULL`
-	tag, err := r.db.Exec(ctx, query, at, tokenHash)
+		SET revoked_at = NOW()
+		WHERE token_hash = $1 AND revoked_at IS NULL`
+	tag, err := r.db.Exec(ctx, query, tokenHash)
 	if err != nil {
 		return false, err
 	}
 	return tag.RowsAffected() > 0, nil
 }
 
-func (r *repository) RevokeAllForUser(ctx context.Context, userID int64, at time.Time) error {
+func (r *repository) RevokeAllForUser(ctx context.Context, userID int64) error {
 	const query = `
 		UPDATE refresh_tokens
-		SET revoked_at = $1
-		WHERE user_id = $2 AND revoked_at IS NULL`
-	_, err := r.db.Exec(ctx, query, at, userID)
+		SET revoked_at = NOW()
+		WHERE user_id = $1 AND revoked_at IS NULL`
+	_, err := r.db.Exec(ctx, query, userID)
 	return err
 }

@@ -11,12 +11,13 @@ import (
 
 	authHandler "icpo-backend/internal/api/handlers/auth"
 	healthHandler "icpo-backend/internal/api/handlers/health"
+	profileHandler "icpo-backend/internal/api/handlers/profile"
 	swaggerHandler "icpo-backend/internal/api/handlers/swagger"
-	testAuthHandler "icpo-backend/internal/api/handlers/test-auth"
 	"icpo-backend/internal/api/middleware"
 	"icpo-backend/internal/api/routes"
 	"icpo-backend/internal/config"
 	authDomain "icpo-backend/internal/domain/auth"
+	profileDomain "icpo-backend/internal/domain/profile"
 	tokenDomain "icpo-backend/internal/domain/token"
 	userDomain "icpo-backend/internal/domain/user"
 	"icpo-backend/internal/infrastructure/database"
@@ -61,18 +62,22 @@ func run() error {
 		userRepo,
 		tokenSvc,
 	)
+	profileSvc := profileDomain.NewService(
+		userRepo,
+		tokenRepo,
+	)
 
 	healthH := healthHandler.NewHandler()
 	swaggerH := swaggerHandler.NewHandler()
 	authH := authHandler.NewHandler(authSvc)
-	testAuthH := testAuthHandler.NewHandler()
+	profileH := profileHandler.NewHandler(profileSvc)
 	authMiddleware := middleware.Authenticate(tokenSvc)
 
 	router := routes.NewRouter(routes.Deps{
 		Health:       healthH,
 		Swagger:      swaggerH,
 		Auth:         authH,
-		TestAuth:     testAuthH,
+		Profile:      profileH,
 		Authenticate: authMiddleware,
 	})
 

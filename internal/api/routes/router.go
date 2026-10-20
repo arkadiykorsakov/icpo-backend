@@ -12,7 +12,7 @@ type Deps struct {
 	Health       HealthHandler
 	Swagger      SwaggerHandler
 	Auth         AuthHandler
-	TestAuth     TestAuthHandler
+	Profile      ProfileHandler
 	Authenticate Middleware
 }
 
@@ -20,7 +20,7 @@ func NewRouter(d Deps) http.Handler {
 	api := http.NewServeMux()
 	registerHealthHandler(api, d.Health)
 	registerAuthHandler(api, d.Auth)
-	registerTestAuthHandler(api, d.TestAuth, d.Authenticate)
+	registerProfileHandler(api, d.Profile, d.Authenticate)
 
 	mux := http.NewServeMux()
 	mux.Handle("/api/v1/", http.StripPrefix("/api/v1", api))

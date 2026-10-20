@@ -17,6 +17,17 @@ info:
     Если отозванный refresh-токен предъявить повторно, считается, что он украден:
     отзываются **все** refresh-токены пользователя, и нужно заново войти через `/auth/login`.
 
+    ### Код 401
+
+    - Защищённые эндпоинты: `401` — проблема с access-токеном (отсутствует, неверный формат,
+      истёк, недействителен). Клиент должен выполнить `/auth/refresh` и повторить запрос.
+    - `/auth/login`: `401` — неверный email или пароль. Обновлять токены в этом случае **не нужно**,
+      поэтому interceptor клиента должен исключить `/auth/*` из логики «401 → refresh».
+    - `/auth/refresh`: `401` — refresh-токен недействителен, нужен повторный вход через `/auth/login`.
+
+    Неверный старый пароль при смене пароля (`/profile/password`) возвращается как `422`,
+    а не `401`, чтобы не запускать обновление токенов.
+
     Ошибки возвращаются в формате `{"message": "..."}`; ошибки валидации — в формате
     `{"message": "...", "errors": {"поле": ["..."]}}` со статусом `422`.
   version: 0.1.0
@@ -28,8 +39,8 @@ tags:
     description: Служебные эндпоинты
   - name: auth
     description: Регистрация, вход и управление токенами
-  - name: test-auth
-    description: Проверка авторизации (для разработки и отладки)
+  - name: profile
+    description: Профиль текущего пользователя (требуется access-токен)
 paths:
   /api/v1/health:
     get:
@@ -122,6 +133,7 @@ paths:
         Проверяет учётные данные и выдаёт пару токенов.
         Для несуществующего email и неверного пароля возвращается одинаковая
         ошибка `401`, чтобы нельзя было определить, зарегистрирован ли email.
+        Этот `401` не означает протухший токен — обновлять токены не нужно.
       operationId: authLogin
       requestBody:
         required: true
@@ -215,7 +227,7 @@ paths:
       summary: Выход (отзыв refresh-токена)
       description: |
         Отзывает переданный refresh-токен. Операция идемпотентна: если токен
-        не существует или уже отозван, всё равно вернётся `200`.
+        не существует или уже отозван, всё равно вернётся `204`.
 
         Уже выданный access-токен продолжает действовать до истечения срока жизни.
       operationId: authLogout
@@ -226,18 +238,8 @@ paths:
             schema:
               $ref: '#/components/schemas/RefreshRequest'
       responses:
-        '200':
-          description: Токен отозван
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: logout
-                required:
-                  - message
+        '204':
+          description: Токен отозван (тело ответа пустое)
         '400':
           description: Некорректное тело запроса или пустой refresh-токен
           content:
@@ -253,48 +255,141 @@ paths:
                     message: Empty refresh token
         '500':
           $ref: '#/components/responses/InternalError'
-  /api/v1/test-auth:
+  /api/v1/profile:
     get:
       tags:
-        - test-auth
-      summary: Проверка access-токена
-      description: |
-        Защищённый эндпоинт для проверки работы авторизации. Если передан
-        действующий access-токен, возвращает `user_id` из токена.
-        Удобен для отладки клиента и как образец подключения middleware `Authenticate`.
-      operationId: testAuth
+        - profile
+      summary: Получить профиль текущего пользователя
+      description: Возвращает данные пользователя, чей `user_id` указан в access-токене.
+      operationId: profileGet
       security:
         - bearerAuth: []
       responses:
         '200':
-          description: Токен действителен
+          description: Профиль пользователя
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  user_id:
-                    type: integer
-                    format: int64
-                    example: 1
-                required:
-                  - user_id
+                $ref: '#/components/schemas/ProfileResponse'
         '401':
-          description: |
-            Заголовок `Authorization` отсутствует, имеет неверный формат
-            (ожидается `Bearer <token>`), либо токен недействителен или истёк.
-          headers:
-            WWW-Authenticate:
-              description: Схема аутентификации
-              schema:
-                type: string
-                example: Bearer realm="api"
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/UserNotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags:
+        - profile
+      summary: Обновить имя и email
+      description: |
+        Обновляет email и имя текущего пользователя. Оба поля обязательны.
+        Email приводится к нижнему регистру, пробелы по краям обрезаются.
+        Если email занят другим пользователем, вернётся `422` с `errors.email`.
+      operationId: profileUpdate
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+            example:
+              email: new@example.com
+              name: Иван Петров
+      responses:
+        '200':
+          description: Профиль обновлён
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-              example:
-                message: Unauthorized
+                $ref: '#/components/schemas/ProfileResponse'
+        '400':
+          $ref: '#/components/responses/InvalidBody'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/UserNotFound'
+        '422':
+          description: |
+            Ошибка валидации или email уже занят
+            (в этом случае `errors.email = ["Email already taken"]`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              examples:
+                invalid:
+                  summary: Некорректные данные
+                  value:
+                    message: The given data was invalid
+                    errors:
+                      email:
+                        - Field email must be a valid email
+                emailTaken:
+                  summary: Email уже занят
+                  value:
+                    message: The given data was invalid
+                    errors:
+                      email:
+                        - Email already taken
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/profile/password:
+    patch:
+      tags:
+        - profile
+      summary: Сменить пароль
+      description: |
+        Проверяет старый пароль, сохраняет новый (bcrypt) и отзывает
+        **все** refresh-токены пользователя. После успешной смены клиенту
+        нужно заново войти через `/auth/login`.
+
+        Уже выданные access-токены продолжают действовать до истечения срока жизни.
+        Неверный старый пароль возвращается как `422` с `errors.old_password`
+        (а не `401`), чтобы клиент не пытался обновлять токены.
+      operationId: profileUpdatePassword
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePasswordRequest'
+            example:
+              old_password: secret123
+              new_password: newsecret456
+      responses:
+        '204':
+          description: Пароль изменён, refresh-токены отозваны (тело ответа пустое)
+        '400':
+          $ref: '#/components/responses/InvalidBody'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/UserNotFound'
+        '422':
+          description: Ошибка валидации или неверный старый пароль
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              examples:
+                invalid:
+                  summary: Некорректные данные
+                  value:
+                    message: The given data was invalid
+                    errors:
+                      new_password:
+                        - Field new_password must have at least 8 characters
+                wrongPassword:
+                  summary: Неверный старый пароль
+                  value:
+                    message: The given data was invalid
+                    errors:
+                      old_password:
+                        - Wrong password
         '500':
           $ref: '#/components/responses/InternalError'
 components:
@@ -351,6 +446,44 @@ components:
         refresh_token:
           type: string
           description: Refresh-токен, полученный при входе или предыдущем обновлении.
+    UpdateProfileRequest:
+      type: object
+      required:
+        - email
+        - name
+      properties:
+        email:
+          type: string
+          format: email
+          example: new@example.com
+        name:
+          type: string
+          maxLength: 100
+          example: Иван Петров
+    UpdatePasswordRequest:
+      type: object
+      required:
+        - old_password
+        - new_password
+      properties:
+        old_password:
+          type: string
+          format: password
+          example: secret123
+        new_password:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 72
+          description: Не менее 8 символов и не более 72 **байт** (ограничение bcrypt).
+          example: newsecret456
+    ProfileResponse:
+      type: object
+      properties:
+        profile:
+          $ref: '#/components/schemas/User'
+      required:
+        - profile
     User:
       type: object
       properties:
@@ -423,6 +556,31 @@ components:
         - message
         - errors
   responses:
+    Unauthorized:
+      description: |
+        Заголовок `Authorization` отсутствует, имеет неверный формат
+        (ожидается `Bearer <token>`), либо access-токен недействителен или истёк.
+        Клиент должен выполнить `/auth/refresh`.
+      headers:
+        WWW-Authenticate:
+          description: Схема аутентификации
+          schema:
+            type: string
+            example: Bearer realm="api"
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: Unauthorized
+    UserNotFound:
+      description: Пользователь из токена не найден
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: User not found
     InvalidBody:
       description: Тело запроса не является корректным JSON, содержит неизвестные поля или данные после JSON-объекта
       content:
