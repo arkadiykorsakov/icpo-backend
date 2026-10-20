@@ -32,8 +32,8 @@ type Repository interface {
 	Create(ctx context.Context, userID int64, tokenHash string, expiresAt time.Time) error
 	GetByHash(ctx context.Context, tokenHash string) (*RefreshToken, error)
 	Rotate(ctx context.Context, oldHash string, userID int64, newHash string, newExpiresAt, now time.Time) (bool, error)
-	Revoke(ctx context.Context, tokenHash string, at time.Time) (bool, error)
-	RevokeAllForUser(ctx context.Context, userID int64, at time.Time) error
+	Revoke(ctx context.Context, tokenHash string) (bool, error)
+	RevokeAllForUser(ctx context.Context, userID int64) error
 }
 
 type Claims struct {
@@ -138,7 +138,7 @@ func (s *service) RefreshToken(ctx context.Context, refreshTokenString string) (
 	}
 
 	if stored.RevokedAt != nil {
-		if err := s.repository.RevokeAllForUser(ctx, stored.UserID, now); err != nil {
+		if err := s.repository.RevokeAllForUser(ctx, stored.UserID); err != nil {
 			return nil, err
 		}
 		return nil, errs.ErrInvalidToken
@@ -170,6 +170,6 @@ func (s *service) RefreshToken(ctx context.Context, refreshTokenString string) (
 }
 
 func (s *service) Logout(ctx context.Context, refreshTokenString string) error {
-	_, err := s.repository.Revoke(ctx, hashToken(refreshTokenString), s.now())
+	_, err := s.repository.Revoke(ctx, hashToken(refreshTokenString))
 	return err
 }

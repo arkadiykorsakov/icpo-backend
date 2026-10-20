@@ -5,8 +5,8 @@ import (
 	"errors"
 	"net/http"
 
-	"icpo-backend/internal/api/httpx"
 	"icpo-backend/internal/api/handlers/auth/dto"
+	"icpo-backend/internal/api/httpx"
 	tokenDto "icpo-backend/internal/domain/token/dto"
 	userDomain "icpo-backend/internal/domain/user"
 	errs "icpo-backend/internal/errors"
@@ -124,5 +124,6 @@ func (h *handler) Logout(w http.ResponseWriter, r *http.Request) {
 		httpx.ServerError(w, err)
 		return
 	}
-	httpx.JSON(w, http.StatusOK, map[string]string{"message": "logout"})
+
+	w.WriteHeader(http.StatusNoContent)
 }
