@@ -4,14 +4,18 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strings"
 
 	"icpo-backend/internal/api/handlers/auth/dto"
 	"icpo-backend/internal/api/httpx"
 	tokenDto "icpo-backend/internal/domain/token/dto"
 	userDomain "icpo-backend/internal/domain/user"
 	errs "icpo-backend/internal/errors"
+	"icpo-backend/pkg/cookies"
 	"icpo-backend/pkg/validator"
 )
+
+const refreshTokenCookie = "refresh_token"
 
 type Service interface {
 	Register(ctx context.Context, email, name, password string) (*userDomain.User, error)
@@ -22,10 +26,22 @@ type Service interface {
 
 type handler struct {
 	service Service
+	cookies cookies.Manager
 }
 
-func NewHandler(service Service) *handler {
-	return &handler{service: service}
+func NewHandler(service Service, cookiesManager cookies.Manager) *handler {
+	return &handler{service: service, cookies: cookiesManager}
+}
+
+func (h *handler) refreshTokenFromRequest(r *http.Request) (string, error) {
+	token, err := h.cookies.Get(r, refreshTokenCookie)
+	if errors.Is(err, cookies.ErrNotFound) {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(token), nil
 }
 
 func (h *handler) Register(w http.ResponseWriter, r *http.Request) {
@@ -76,54 +92,54 @@ func (h *handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.cookies.Set(w, refreshTokenCookie, pair.RefreshToken, pair.RefreshExpiresIn)
+
 	httpx.SetNoStore(w)
 	httpx.JSON(w, http.StatusOK, pair)
 }
 
 func (h *handler) Refresh(w http.ResponseWriter, r *http.Request) {
-	var input dto.RefreshRequest
-
-	if err := httpx.DecodeJSON(w, r, &input); err != nil {
-		return
-	}
-
-	if input.RefreshToken == "" {
-		httpx.Error(w, http.StatusBadRequest, "Empty refresh token")
-		return
-	}
-
-	pair, err := h.service.RefreshToken(r.Context(), input.RefreshToken)
+	refreshToken, err := h.refreshTokenFromRequest(r)
 	if err != nil {
-		switch {
-		case errors.Is(err, errs.ErrInvalidToken):
-			httpx.Error(w, http.StatusUnauthorized, err.Error())
-		default:
-			httpx.ServerError(w, err)
-		}
+		httpx.ServerError(w, err)
 		return
 	}
+	if refreshToken == "" {
+		httpx.Unauthorized(w)
+		return
+	}
+
+	pair, err := h.service.RefreshToken(r.Context(), refreshToken)
+	if err != nil {
+		if errors.Is(err, errs.ErrInvalidToken) {
+			h.cookies.Delete(w, refreshTokenCookie)
+			httpx.Unauthorized(w)
+			return
+		}
+		httpx.ServerError(w, err)
+		return
+	}
+
+	h.cookies.Set(w, refreshTokenCookie, pair.RefreshToken, pair.RefreshExpiresIn)
 
 	httpx.SetNoStore(w)
 	httpx.JSON(w, http.StatusOK, pair)
 }
 
 func (h *handler) Logout(w http.ResponseWriter, r *http.Request) {
-	var input dto.RefreshRequest
-
-	if err := httpx.DecodeJSON(w, r, &input); err != nil {
-		return
-	}
-
-	if input.RefreshToken == "" {
-		httpx.Error(w, http.StatusBadRequest, "Empty refresh token")
-		return
-	}
-
-	err := h.service.Logout(r.Context(), input.RefreshToken)
+	refreshToken, err := h.refreshTokenFromRequest(r)
 	if err != nil {
 		httpx.ServerError(w, err)
 		return
 	}
 
+	if refreshToken != "" {
+		if err := h.service.Logout(r.Context(), refreshToken); err != nil {
+			httpx.ServerError(w, err)
+			return
+		}
+	}
+
+	h.cookies.Delete(w, refreshTokenCookie)
 	w.WriteHeader(http.StatusNoContent)
 }

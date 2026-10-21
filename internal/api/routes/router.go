@@ -9,22 +9,24 @@ import (
 type Middleware = func(http.Handler) http.Handler
 
 type Deps struct {
-	Health       HealthHandler
-	Swagger      SwaggerHandler
-	Auth         AuthHandler
-	Profile      ProfileHandler
-	Authenticate Middleware
+	Health        HealthHandler
+	Swagger       SwaggerHandler
+	Auth          AuthHandler
+	Profile       ProfileHandler
+	Authenticate  Middleware
+	CORS          Middleware
+	TrustedOrigin Middleware
 }
 
 func NewRouter(d Deps) http.Handler {
 	api := http.NewServeMux()
 	registerHealthHandler(api, d.Health)
-	registerAuthHandler(api, d.Auth)
+	registerAuthHandler(api, d.Auth, d.TrustedOrigin)
 	registerProfileHandler(api, d.Profile, d.Authenticate)
 
 	mux := http.NewServeMux()
 	mux.Handle("/api/v1/", http.StripPrefix("/api/v1", api))
 	registerSwaggerHandler(mux, d.Swagger)
 
-	return middleware.Logging(mux)
+	return middleware.Logging(d.CORS(mux))
 }

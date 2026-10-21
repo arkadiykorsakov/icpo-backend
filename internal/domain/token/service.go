@@ -81,10 +81,11 @@ func hashToken(token string) string {
 
 func (s *service) newPair(access, refresh string) *dto.TokenPair {
 	return &dto.TokenPair{
-		AccessToken:  access,
-		RefreshToken: refresh,
-		TokenType:    "Bearer",
-		ExpiresIn:    int64(s.config.AccessTTL.Seconds()),
+		AccessToken:      access,
+		TokenType:        "Bearer",
+		ExpiresIn:        int(s.config.AccessTTL.Seconds()),
+		RefreshToken:     refresh,
+		RefreshExpiresIn: int(s.config.RefreshTTL.Seconds()),
 	}
 }
 

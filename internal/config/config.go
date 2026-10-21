@@ -3,8 +3,11 @@ package config
 import (
 	"fmt"
 	"net"
+	"net/http"
 	"net/url"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -16,6 +19,11 @@ type Config struct {
 	JWTSecret   string
 	AccessTTL   time.Duration
 	RefreshTTL  time.Duration
+
+	CookieSecure       bool
+	CookieSameSite     http.SameSite
+	CookieDomain       string
+	CORSAllowedOrigins []string
 }
 
 func Load() (*Config, error) {
@@ -38,6 +46,22 @@ func Load() (*Config, error) {
 	if cfg.RefreshTTL, err = parseDuration("JWT_REFRESH_TTL", "720h"); err != nil {
 		return nil, err
 	}
+
+	appEnv := getEnv("APP_ENV", "production")
+	secureDefault := strconv.FormatBool(appEnv != "development")
+	if cfg.CookieSecure, err = strconv.ParseBool(getEnv("COOKIE_SECURE", secureDefault)); err != nil {
+		return nil, fmt.Errorf("invalid COOKIE_SECURE: %w", err)
+	}
+
+	if cfg.CookieSameSite, err = parseSameSite(getEnv("COOKIE_SAMESITE", "strict")); err != nil {
+		return nil, err
+	}
+	if cfg.CookieSameSite == http.SameSiteNoneMode && !cfg.CookieSecure {
+		return nil, fmt.Errorf("COOKIE_SAMESITE=none requires COOKIE_SECURE=true")
+	}
+
+	cfg.CookieDomain = os.Getenv("COOKIE_DOMAIN")
+	cfg.CORSAllowedOrigins = splitList(os.Getenv("CORS_ALLOWED_ORIGINS"))
 
 	return cfg, nil
 }
@@ -77,4 +101,27 @@ func parseDuration(key, def string) (time.Duration, error) {
 		return 0, fmt.Errorf("invalid %s: must be positive", key)
 	}
 	return d, nil
+}
+
+func parseSameSite(v string) (http.SameSite, error) {
+	switch strings.ToLower(v) {
+	case "strict":
+		return http.SameSiteStrictMode, nil
+	case "lax":
+		return http.SameSiteLaxMode, nil
+	case "none":
+		return http.SameSiteNoneMode, nil
+	default:
+		return 0, fmt.Errorf("invalid COOKIE_SAMESITE %q: want strict|lax|none", v)
+	}
+}
+
+func splitList(s string) []string {
+	var out []string
+	for _, p := range strings.Split(s, ",") {
+		if p = strings.TrimSpace(p); p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
 }

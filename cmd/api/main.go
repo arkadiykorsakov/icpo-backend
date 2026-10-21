@@ -22,6 +22,7 @@ import (
 	userDomain "icpo-backend/internal/domain/user"
 	"icpo-backend/internal/infrastructure/database"
 	"icpo-backend/internal/infrastructure/database/migrator"
+	"icpo-backend/pkg/cookies"
 )
 
 func main() {
@@ -67,18 +68,27 @@ func run() error {
 		tokenRepo,
 	)
 
+	cookiesManager := cookies.NewManager(cookies.Options{
+		Path:     "/api/v1/auth",
+		Domain:   cfg.CookieDomain,
+		Secure:   cfg.CookieSecure,
+		HttpOnly: true,
+		SameSite: cfg.CookieSameSite,
+	})
+
 	healthH := healthHandler.NewHandler()
 	swaggerH := swaggerHandler.NewHandler()
-	authH := authHandler.NewHandler(authSvc)
+	authH := authHandler.NewHandler(authSvc, cookiesManager)
 	profileH := profileHandler.NewHandler(profileSvc)
-	authMiddleware := middleware.Authenticate(tokenSvc)
 
 	router := routes.NewRouter(routes.Deps{
-		Health:       healthH,
-		Swagger:      swaggerH,
-		Auth:         authH,
-		Profile:      profileH,
-		Authenticate: authMiddleware,
+		Health:        healthH,
+		Swagger:       swaggerH,
+		Auth:          authH,
+		Profile:       profileH,
+		Authenticate:  middleware.Authenticate(tokenSvc),
+		CORS:          middleware.CORS(cfg.CORSAllowedOrigins),
+		TrustedOrigin: middleware.RequireTrustedOrigin(cfg.CORSAllowedOrigins),
 	})
 
 	srv := &http.Server{

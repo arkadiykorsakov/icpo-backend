@@ -9,9 +9,9 @@ type AuthHandler interface {
 	Logout(w http.ResponseWriter, r *http.Request)
 }
 
-func registerAuthHandler(mux *http.ServeMux, h AuthHandler) {
+func registerAuthHandler(mux *http.ServeMux, h AuthHandler, trustedOrigin Middleware) {
 	mux.HandleFunc("POST /auth/register", h.Register)
 	mux.HandleFunc("POST /auth/login", h.Login)
-	mux.HandleFunc("POST /auth/refresh", h.Refresh)
-	mux.HandleFunc("POST /auth/logout", h.Logout)
+	mux.Handle("POST /auth/refresh", trustedOrigin(http.HandlerFunc(h.Refresh)))
+	mux.Handle("POST /auth/logout", trustedOrigin(http.HandlerFunc(h.Logout)))
 }
