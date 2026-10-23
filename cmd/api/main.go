@@ -10,6 +10,7 @@ import (
 	"time"
 
 	authHandler "icpo-backend/internal/api/handlers/auth"
+	countryHandler "icpo-backend/internal/api/handlers/country"
 	healthHandler "icpo-backend/internal/api/handlers/health"
 	profileHandler "icpo-backend/internal/api/handlers/profile"
 	swaggerHandler "icpo-backend/internal/api/handlers/swagger"
@@ -17,6 +18,7 @@ import (
 	"icpo-backend/internal/api/routes"
 	"icpo-backend/internal/config"
 	authDomain "icpo-backend/internal/domain/auth"
+	countryDomain "icpo-backend/internal/domain/country"
 	profileDomain "icpo-backend/internal/domain/profile"
 	tokenDomain "icpo-backend/internal/domain/token"
 	userDomain "icpo-backend/internal/domain/user"
@@ -53,6 +55,7 @@ func run() error {
 
 	userRepo := userDomain.NewRepository(pool)
 	tokenRepo := tokenDomain.NewRepository(pool)
+	countryRepo := countryDomain.NewRepository(pool)
 
 	tokenSvc := tokenDomain.NewService(tokenRepo, tokenDomain.Config{
 		AccessTTL:  cfg.AccessTTL,
@@ -67,6 +70,7 @@ func run() error {
 		userRepo,
 		tokenRepo,
 	)
+	countrySvc := countryDomain.NewService(countryRepo)
 
 	cookiesManager := cookies.NewManager(cookies.Options{
 		Path:     "/api/v1/auth",
@@ -80,12 +84,14 @@ func run() error {
 	swaggerH := swaggerHandler.NewHandler()
 	authH := authHandler.NewHandler(authSvc, cookiesManager)
 	profileH := profileHandler.NewHandler(profileSvc)
+	countryH := countryHandler.NewHandler(countrySvc)
 
 	router := routes.NewRouter(routes.Deps{
 		Health:        healthH,
 		Swagger:       swaggerH,
 		Auth:          authH,
 		Profile:       profileH,
+		Country:       countryH,
 		Authenticate:  middleware.Authenticate(tokenSvc),
 		CORS:          middleware.CORS(cfg.CORSAllowedOrigins),
 		TrustedOrigin: middleware.RequireTrustedOrigin(cfg.CORSAllowedOrigins),

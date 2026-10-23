@@ -57,6 +57,8 @@ tags:
     description: Регистрация, вход и управление токенами
   - name: profile
     description: Профиль текущего пользователя (требуется access-токен)
+  - name: countries
+    description: Справочник стран (требуется access-токен)
 paths:
   /api/v1/health:
     get:
@@ -406,6 +408,226 @@ paths:
                         - Wrong password
         '500':
           $ref: '#/components/responses/InternalError'
+  /api/v1/countries:
+    get:
+      tags:
+        - countries
+      summary: Список стран
+      description: |
+        Возвращает страницу справочника стран с поиском и сортировкой.
+
+        - `search` — регистронезависимый поиск по подстроке в названии; спецсимволы `%`, `_` и `\`
+          трактуются как обычные символы.
+        - `sort` — поле сортировки (`id`, `name`, `created_at`), `dir` — направление.
+          Без `sort` используется сортировка по `name`. `dir` без `sort` — ошибка `400`.
+        - При равных значениях поля порядок дополнительно фиксируется по `id`,
+          поэтому строки не дублируются и не пропадают между страницами.
+      operationId: countriesList
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/Search'
+        - name: sort
+          in: query
+          description: Поле сортировки. По умолчанию `name`.
+          required: false
+          schema:
+            type: string
+            enum:
+              - id
+              - name
+              - created_at
+        - name: dir
+          in: query
+          description: Направление сортировки. Если задан `sort`, а `dir` нет, используется `asc`.
+          required: false
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: asc
+      responses:
+        '200':
+          description: Страница списка стран
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CountryListResponse'
+              example:
+                items:
+                  - id: 1
+                    name: Россия
+                    created_at: '2026-10-22T08:40:22Z'
+                  - id: 2
+                    name: Франция
+                    created_at: '2026-10-22T08:41:05Z'
+                total: 2
+                page: 1
+                per_page: 20
+        '400':
+          description: Некорректные параметры пагинации или сортировки
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                page:
+                  summary: Некорректная страница
+                  value:
+                    message: page must be an integer
+                perPage:
+                  summary: per_page вне допустимого диапазона
+                  value:
+                    message: per_page must be in [1,100]
+                sortField:
+                  summary: Неизвестное поле сортировки
+                  value:
+                    message: unknown sort field password
+                sortDir:
+                  summary: Некорректное направление
+                  value:
+                    message: 'invalid sort direction "up": must be "asc" or "desc"'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags:
+        - countries
+      summary: Создать страну
+      description: |
+        Добавляет страну в справочник. Пробелы по краям названия обрезаются.
+        Названия уникальны **без учёта регистра**: «Россия» и «россия» — дубликаты.
+        При дубликате вернётся `422` с `errors.name`.
+      operationId: countriesCreate
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCountryRequest'
+            example:
+              name: Россия
+      responses:
+        '201':
+          description: Страна создана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Country'
+        '400':
+          $ref: '#/components/responses/InvalidBody'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          description: Ошибка валидации или такая страна уже существует
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              examples:
+                invalid:
+                  summary: Пустое название
+                  value:
+                    message: The given data was invalid
+                    errors:
+                      name:
+                        - Field name is required
+                exists:
+                  summary: Страна уже существует
+                  value:
+                    message: The given data was invalid
+                    errors:
+                      name:
+                        - ref data already exists
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/countries/autocomplete:
+    get:
+      tags:
+        - countries
+      summary: Автодополнение стран
+      description: |
+        Возвращает не более 10 стран для подсказок в форме. Совпадения по началу названия
+        идут первыми, остальные (по подстроке) — после них, внутри групп — по алфавиту.
+        Без `search` возвращаются первые 10 стран по алфавиту.
+      operationId: countriesAutocomplete
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Search'
+      responses:
+        '200':
+          description: Список подсказок
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CountryAutocompleteResponse'
+              example:
+                items:
+                  - id: 1
+                    label: Россия
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/countries/{id}:
+    delete:
+      tags:
+        - countries
+      summary: Удалить страну
+      description: |
+        Удаляет страну из справочника. Если на страну ссылаются другие записи
+        (например, города), удаление запрещено и вернётся `409`.
+      operationId: countriesDelete
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Идентификатор страны (положительное целое).
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+            example: 1
+      responses:
+        '204':
+          description: Страна удалена (тело ответа пустое)
+        '400':
+          description: Идентификатор не является положительным целым числом
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: Id must be a positive integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Страна не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: ref data not found
+        '409':
+          description: Страна используется в других записях
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: ref data is in use
+        '500':
+          $ref: '#/components/responses/InternalError'
 components:
   securitySchemes:
     bearerAuth:
@@ -568,6 +790,105 @@ components:
       required:
         - message
         - errors
+    Country:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        name:
+          type: string
+          example: Россия
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - created_at
+    CreateCountryRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          description: Не пустое и не состоит из одних пробелов. Уникально без учёта регистра.
+          example: Россия
+    CountryListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Country'
+        total:
+          type: integer
+          description: Общее число записей с учётом `search` (не только на текущей странице).
+          example: 42
+        page:
+          type: integer
+          example: 1
+        per_page:
+          type: integer
+          example: 20
+      required:
+        - items
+        - total
+        - page
+        - per_page
+    CountryAutocompleteResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AutocompleteItem'
+      required:
+        - items
+    AutocompleteItem:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        label:
+          type: string
+          example: Россия
+      required:
+        - id
+        - label
+  parameters:
+    Page:
+      name: page
+      in: query
+      description: Номер страницы, начиная с 1.
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 1000000
+        default: 1
+    PerPage:
+      name: per_page
+      in: query
+      description: Размер страницы.
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    Search:
+      name: search
+      in: query
+      description: Подстрока для регистронезависимого поиска по названию. Пробелы по краям обрезаются.
+      required: false
+      schema:
+        type: string
   headers:
     SetRefreshCookie:
       description: |
