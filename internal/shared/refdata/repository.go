@@ -202,12 +202,11 @@ func (r *repository[T]) Delete(ctx context.Context, id int64) error {
 }
 
 func (r *repository[T]) ExistsByName(ctx context.Context, name string) (bool, error) {
-	query := fmt.Sprintf(`SELECT COUNT(*) FROM %s WHERE LOWER(name) = LOWER($1)`, r.table())
+	query := fmt.Sprintf(`SELECT EXISTS(SELECT 1 FROM %s WHERE LOWER(name) = LOWER($1))`, r.table())
 
-	var count int
-	err := r.db.QueryRow(ctx, query, name).Scan(&count)
-	if err != nil {
+	var exists bool
+	if err := r.db.QueryRow(ctx, query, name).Scan(&exists); err != nil {
 		return false, err
 	}
-	return count > 0, nil
+	return exists, nil
 }
