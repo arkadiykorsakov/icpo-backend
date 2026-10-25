@@ -66,6 +66,13 @@ func Load() (*Config, error) {
 	return cfg, nil
 }
 
+// LoadDatabaseURL возвращает только строку подключения к БД, не требуя остальных
+// переменных (JWT_SECRET и др.). Нужен вспомогательным командам вроде cmd/seed.
+func LoadDatabaseURL() string {
+	_ = godotenv.Load()
+	return buildDSN()
+}
+
 func getEnv(key, def string) string {
 	if v := os.Getenv(key); v != "" {
 		return v
