@@ -14,8 +14,8 @@ import (
 )
 
 type Service interface {
-	Profile(ctx context.Context, userID int64) (*userDomain.User, error)
-	Update(ctx context.Context, userID int64, email, name string) (*userDomain.User, error)
+	Profile(ctx context.Context, userID int64) (userDomain.User, error)
+	Update(ctx context.Context, userID int64, email, name string) (userDomain.User, error)
 	UpdatePassword(ctx context.Context, userID int64, oldPassword, newPassword string) error
 }
 

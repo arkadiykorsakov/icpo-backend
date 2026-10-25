@@ -2,6 +2,7 @@ package profile
 
 import (
 	"context"
+
 	userDomain "icpo-backend/internal/domain/user"
 	errs "icpo-backend/internal/errors"
 
@@ -9,8 +10,8 @@ import (
 )
 
 type UserRepository interface {
-	GetByID(ctx context.Context, id int64) (*userDomain.User, error)
-	Update(ctx context.Context, userID int64, user userDomain.User) (*userDomain.User, error)
+	GetByID(ctx context.Context, id int64) (userDomain.User, error)
+	Update(ctx context.Context, userID int64, user userDomain.User) (userDomain.User, error)
 	UpdatePassword(ctx context.Context, userID int64, passwordHash string) error
 }
 
@@ -29,11 +30,11 @@ func NewService(userRepo UserRepository, tokenRepo TokenRepository) *service {
 	}
 }
 
-func (s *service) Profile(ctx context.Context, userID int64) (*userDomain.User, error) {
+func (s *service) Profile(ctx context.Context, userID int64) (userDomain.User, error) {
 	return s.userRepo.GetByID(ctx, userID)
 }
 
-func (s *service) Update(ctx context.Context, userID int64, email, name string) (*userDomain.User, error) {
+func (s *service) Update(ctx context.Context, userID int64, email, name string) (userDomain.User, error) {
 	candidate := userDomain.NewUser(email, name)
 	return s.userRepo.Update(ctx, userID, candidate)
 }

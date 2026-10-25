@@ -18,9 +18,9 @@ import (
 const refreshTokenCookie = "refresh_token"
 
 type Service interface {
-	Register(ctx context.Context, email, name, password string) (*userDomain.User, error)
-	Login(ctx context.Context, email, password string) (*tokenDto.TokenPair, error)
-	RefreshToken(ctx context.Context, refreshToken string) (*tokenDto.TokenPair, error)
+	Register(ctx context.Context, email, name, password string) (userDomain.User, error)
+	Login(ctx context.Context, email, password string) (tokenDto.TokenPair, error)
+	RefreshToken(ctx context.Context, refreshToken string) (tokenDto.TokenPair, error)
 	Logout(ctx context.Context, refreshToken string) error
 }
 
@@ -95,7 +95,7 @@ func (h *handler) Login(w http.ResponseWriter, r *http.Request) {
 	h.cookies.Set(w, refreshTokenCookie, pair.RefreshToken, pair.RefreshExpiresIn)
 
 	httpx.SetNoStore(w)
-	httpx.JSON(w, http.StatusOK, pair)
+	httpx.JSON(w, http.StatusOK, dto.ToTokenPairResponse(pair))
 }
 
 func (h *handler) Refresh(w http.ResponseWriter, r *http.Request) {
@@ -123,7 +123,7 @@ func (h *handler) Refresh(w http.ResponseWriter, r *http.Request) {
 	h.cookies.Set(w, refreshTokenCookie, pair.RefreshToken, pair.RefreshExpiresIn)
 
 	httpx.SetNoStore(w)
-	httpx.JSON(w, http.StatusOK, pair)
+	httpx.JSON(w, http.StatusOK, dto.ToTokenPairResponse(pair))
 }
 
 func (h *handler) Logout(w http.ResponseWriter, r *http.Request) {

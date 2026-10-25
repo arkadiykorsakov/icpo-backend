@@ -27,21 +27,21 @@ func (r *repository) Create(ctx context.Context, userID int64, tokenHash string,
 	return err
 }
 
-func (r *repository) GetByHash(ctx context.Context, tokenHash string) (*RefreshToken, error) {
+func (r *repository) GetByHash(ctx context.Context, tokenHash string) (RefreshToken, error) {
 	const query = `
 		SELECT id, user_id, token_hash, expires_at, revoked_at
 		FROM refresh_tokens
 		WHERE token_hash = $1`
 
-	rt := &RefreshToken{}
+	rt := RefreshToken{}
 	err := r.db.QueryRow(ctx, query, tokenHash).Scan(
 		&rt.ID, &rt.UserID, &rt.TokenHash, &rt.ExpiresAt, &rt.RevokedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, errs.ErrInvalidToken
+		return RefreshToken{}, errs.ErrInvalidToken
 	}
 	if err != nil {
-		return nil, err
+		return RefreshToken{}, err
 	}
 	return rt, nil
 }

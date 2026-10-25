@@ -30,7 +30,7 @@ type Config struct {
 
 type Repository interface {
 	Create(ctx context.Context, userID int64, tokenHash string, expiresAt time.Time) error
-	GetByHash(ctx context.Context, tokenHash string) (*RefreshToken, error)
+	GetByHash(ctx context.Context, tokenHash string) (RefreshToken, error)
 	Rotate(ctx context.Context, oldHash string, userID int64, newHash string, newExpiresAt, now time.Time) (bool, error)
 	Revoke(ctx context.Context, tokenHash string) (bool, error)
 	RevokeAllForUser(ctx context.Context, userID int64) error
@@ -79,8 +79,8 @@ func hashToken(token string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-func (s *service) newPair(access, refresh string) *dto.TokenPair {
-	return &dto.TokenPair{
+func (s *service) newPair(access, refresh string) dto.TokenPair {
+	return dto.TokenPair{
 		AccessToken:      access,
 		TokenType:        "Bearer",
 		ExpiresIn:        int(s.config.AccessTTL.Seconds()),
@@ -89,20 +89,20 @@ func (s *service) newPair(access, refresh string) *dto.TokenPair {
 	}
 }
 
-func (s *service) IssuePair(ctx context.Context, userID int64) (*dto.TokenPair, error) {
+func (s *service) IssuePair(ctx context.Context, userID int64) (dto.TokenPair, error) {
 	now := s.now()
 
 	access, err := s.generateAccessToken(userID, now)
 	if err != nil {
-		return nil, err
+		return dto.TokenPair{}, err
 	}
 	refresh, err := generateRefreshToken()
 	if err != nil {
-		return nil, err
+		return dto.TokenPair{}, err
 	}
 
 	if err := s.repository.Create(ctx, userID, hashToken(refresh), now.Add(s.config.RefreshTTL)); err != nil {
-		return nil, err
+		return dto.TokenPair{}, err
 	}
 	return s.newPair(access, refresh), nil
 }
@@ -129,42 +129,42 @@ func (s *service) ParseAccessToken(tokenString string) (*Claims, error) {
 	return &claims, nil
 }
 
-func (s *service) RefreshToken(ctx context.Context, refreshTokenString string) (*dto.TokenPair, error) {
+func (s *service) RefreshToken(ctx context.Context, refreshTokenString string) (dto.TokenPair, error) {
 	now := s.now()
 	oldHash := hashToken(refreshTokenString)
 
 	stored, err := s.repository.GetByHash(ctx, oldHash)
 	if err != nil {
-		return nil, err
+		return dto.TokenPair{}, err
 	}
 
 	if stored.RevokedAt != nil {
 		if err := s.repository.RevokeAllForUser(ctx, stored.UserID); err != nil {
-			return nil, err
+			return dto.TokenPair{}, err
 		}
-		return nil, errs.ErrInvalidToken
+		return dto.TokenPair{}, errs.ErrInvalidToken
 	}
 
 	if !now.Before(stored.ExpiresAt) {
-		return nil, errs.ErrInvalidToken
+		return dto.TokenPair{}, errs.ErrInvalidToken
 	}
 
 	access, err := s.generateAccessToken(stored.UserID, now)
 	if err != nil {
-		return nil, err
+		return dto.TokenPair{}, err
 	}
 	newRefresh, err := generateRefreshToken()
 	if err != nil {
-		return nil, err
+		return dto.TokenPair{}, err
 	}
 
 	rotated, err := s.repository.Rotate(ctx, oldHash, stored.UserID,
 		hashToken(newRefresh), now.Add(s.config.RefreshTTL), now)
 	if err != nil {
-		return nil, err
+		return dto.TokenPair{}, err
 	}
 	if !rotated {
-		return nil, errs.ErrInvalidToken
+		return dto.TokenPair{}, errs.ErrInvalidToken
 	}
 
 	return s.newPair(access, newRefresh), nil
