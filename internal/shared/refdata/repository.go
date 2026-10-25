@@ -202,7 +202,7 @@ func (r *repository[T]) Delete(ctx context.Context, id int64) error {
 }
 
 func (r *repository[T]) ExistsByName(ctx context.Context, name string) (bool, error) {
-	query := fmt.Sprintf(`SELECT COUNT(*) FROM %s WHERE name = $1`, r.table())
+	query := fmt.Sprintf(`SELECT COUNT(*) FROM %s WHERE LOWER(name) = LOWER($1)`, r.table())
 
 	var count int
 	err := r.db.QueryRow(ctx, query, name).Scan(&count)

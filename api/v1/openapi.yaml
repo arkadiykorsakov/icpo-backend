@@ -582,8 +582,14 @@ paths:
         - countries
       summary: Удалить страну
       description: |
-        Удаляет страну из справочника. Если на страну ссылаются другие записи
-        (например, города), удаление запрещено и вернётся `409`.
+        Удаляет страну из справочника.
+
+        Операция идемпотентна: если страны с таким `id` уже нет, всё равно
+        вернётся `204` — повторный вызов `DELETE` не считается ошибкой.
+        `404` для этого эндпоинта не возвращается.
+
+        Если на страну ссылаются другие записи (например, города),
+        удаление запрещено и вернётся `409`.
       operationId: countriesDelete
       security:
         - bearerAuth: []
@@ -599,7 +605,8 @@ paths:
             example: 1
       responses:
         '204':
-          description: Страна удалена (тело ответа пустое)
+          description: |
+            Страна удалена или уже отсутствовала (тело ответа пустое).
         '400':
           description: Идентификатор не является положительным целым числом
           content:
@@ -610,14 +617,6 @@ paths:
                 message: Id must be a positive integer
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '404':
-          description: Страна не найдена
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              example:
-                message: ref data not found
         '409':
           description: Страна используется в других записях
           content:

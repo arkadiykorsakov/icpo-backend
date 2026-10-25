@@ -3,6 +3,7 @@ package refdata
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -103,7 +104,7 @@ func (h *handler[T]) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	name := strings.ToLower(strings.TrimSpace(input.Name))
+	name := strings.TrimSpace(input.Name)
 
 	exists, err := h.service.ExistsByName(r.Context(), name)
 	if err != nil && !errors.Is(err, errs.ErrRefDataNotFound) {
@@ -115,6 +116,7 @@ func (h *handler[T]) Create(w http.ResponseWriter, r *http.Request) {
 		httpx.ValidationErrors(w, map[string][]string{
 			"name": {errs.ErrRefDataExists.Error()},
 		})
+		return
 	}
 
 	item, err := h.service.Create(r.Context(), name)
@@ -142,7 +144,11 @@ func (h *handler[T]) Delete(w http.ResponseWriter, r *http.Request) {
 	if err := h.service.Delete(r.Context(), id); err != nil {
 		switch {
 		case errors.Is(err, errs.ErrRefDataNotFound):
-			httpx.Error(w, http.StatusNotFound, err.Error())
+			slog.Info("delete: ref data already absent",
+				"err", err,
+				"id", id,
+			)
+			w.WriteHeader(http.StatusNoContent)
 		case errors.Is(err, errs.ErrRefDataInUse):
 			httpx.Error(w, http.StatusConflict, err.Error())
 		default:
