@@ -2,6 +2,9 @@ package refdata
 
 import (
 	"context"
+	"strings"
+
+	errs "icpo-backend/internal/errors"
 	"icpo-backend/internal/shared/refdata/dto"
 )
 
@@ -30,13 +33,21 @@ func (s *service[T]) Autocomplete(ctx context.Context, search string) ([]T, erro
 }
 
 func (s *service[T]) Create(ctx context.Context, name string) (T, error) {
+	var zero T
+
+	name = strings.TrimSpace(name)
+
+	exists, err := s.repository.ExistsByName(ctx, name)
+	if err != nil {
+		return zero, err
+	}
+	if exists {
+		return zero, errs.ErrRefDataExists
+	}
+
 	return s.repository.Create(ctx, name)
 }
 
 func (s *service[T]) Delete(ctx context.Context, id int64) error {
 	return s.repository.Delete(ctx, id)
-}
-
-func (s *service[T]) ExistsByName(ctx context.Context, name string) (bool, error) {
-	return s.repository.ExistsByName(ctx, name)
 }

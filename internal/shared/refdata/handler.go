@@ -17,7 +17,6 @@ import (
 
 type Service[T any] interface {
 	GetList(ctx context.Context, p dto.ListParams) ([]T, int, error)
-	ExistsByName(ctx context.Context, name string) (bool, error)
 	Autocomplete(ctx context.Context, search string) ([]T, error)
 	Create(ctx context.Context, name string) (T, error)
 	Delete(ctx context.Context, id int64) error
@@ -104,22 +103,7 @@ func (h *handler[T]) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	name := strings.TrimSpace(input.Name)
-
-	exists, err := h.service.ExistsByName(r.Context(), name)
-	if err != nil && !errors.Is(err, errs.ErrRefDataNotFound) {
-		httpx.ServerError(w, err)
-		return
-	}
-
-	if exists {
-		httpx.ValidationErrors(w, map[string][]string{
-			"name": {errs.ErrRefDataExists.Error()},
-		})
-		return
-	}
-
-	item, err := h.service.Create(r.Context(), name)
+	item, err := h.service.Create(r.Context(), input.Name)
 	if err != nil {
 		switch {
 		case errors.Is(err, errs.ErrRefDataExists):
