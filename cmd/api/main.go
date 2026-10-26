@@ -12,6 +12,7 @@ import (
 	authHandler "icpo-backend/internal/api/handlers/auth"
 	countryHandler "icpo-backend/internal/api/handlers/country"
 	healthHandler "icpo-backend/internal/api/handlers/health"
+	languageHandler "icpo-backend/internal/api/handlers/language"
 	profileHandler "icpo-backend/internal/api/handlers/profile"
 	swaggerHandler "icpo-backend/internal/api/handlers/swagger"
 	"icpo-backend/internal/api/middleware"
@@ -19,6 +20,7 @@ import (
 	"icpo-backend/internal/config"
 	authDomain "icpo-backend/internal/domain/auth"
 	countryDomain "icpo-backend/internal/domain/country"
+	languageDomain "icpo-backend/internal/domain/language"
 	profileDomain "icpo-backend/internal/domain/profile"
 	tokenDomain "icpo-backend/internal/domain/token"
 	userDomain "icpo-backend/internal/domain/user"
@@ -56,6 +58,7 @@ func run() error {
 	userRepo := userDomain.NewRepository(pool)
 	tokenRepo := tokenDomain.NewRepository(pool)
 	countryRepo := countryDomain.NewRepository(pool)
+	languageRepo := languageDomain.NewRepository(pool)
 
 	tokenSvc := tokenDomain.NewService(tokenRepo, tokenDomain.Config{
 		AccessTTL:  cfg.AccessTTL,
@@ -71,6 +74,7 @@ func run() error {
 		tokenRepo,
 	)
 	countrySvc := countryDomain.NewService(countryRepo)
+	languageSvc := languageDomain.NewService(languageRepo)
 
 	cookiesManager := cookies.NewManager(cookies.Options{
 		Path:     "/api/v1/auth",
@@ -85,6 +89,7 @@ func run() error {
 	authH := authHandler.NewHandler(authSvc, cookiesManager)
 	profileH := profileHandler.NewHandler(profileSvc)
 	countryH := countryHandler.NewHandler(countrySvc)
+	languageH := languageHandler.NewHandler(languageSvc)
 
 	router := routes.NewRouter(routes.Deps{
 		Health:        healthH,
@@ -92,6 +97,7 @@ func run() error {
 		Auth:          authH,
 		Profile:       profileH,
 		Country:       countryH,
+		Language:      languageH,
 		Authenticate:  middleware.Authenticate(tokenSvc),
 		CORS:          middleware.CORS(cfg.CORSAllowedOrigins),
 		TrustedOrigin: middleware.RequireTrustedOrigin(cfg.CORSAllowedOrigins),

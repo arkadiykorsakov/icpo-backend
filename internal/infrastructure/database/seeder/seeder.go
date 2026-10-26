@@ -27,6 +27,7 @@ const maxNameLen = 255 // совпадает с max=255 в dto.CreateRequest
 // на которые они ссылаются.
 var Tables = []string{
 	"countries",
+	"languages",
 }
 
 // Run загружает сиды в одной транзакции. Если only пуст — загружаются все
