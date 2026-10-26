@@ -1,13 +1,16 @@
-// Команда seed загружает начальные данные справочников.
+// Команда seed загружает начальные данные в базу.
 //
-//	go run ./cmd/seed             # все справочники
-//	go run ./cmd/seed countries   # только указанные
+//	go run ./cmd/seed             # все сидеры
+//	go run ./cmd/seed NAME ...    # только указанные
+//	go run ./cmd/seed -list       # показать доступные сидеры
 //
 // Схема БД должна быть уже создана (миграции применяются при старте cmd/api).
 package main
 
 import (
 	"context"
+	"flag"
+	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -25,6 +28,16 @@ func main() {
 }
 
 func run() error {
+	list := flag.Bool("list", false, "показать доступные сидеры и выйти")
+	flag.Parse()
+
+	if *list {
+		for _, name := range seeder.Names() {
+			fmt.Println(name)
+		}
+		return nil
+	}
+
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 
@@ -34,5 +47,5 @@ func run() error {
 	}
 	defer pool.Close()
 
-	return seeder.Run(ctx, pool, os.Args[1:])
+	return seeder.Run(ctx, pool, flag.Args())
 }
