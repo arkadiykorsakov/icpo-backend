@@ -61,6 +61,8 @@ tags:
     description: Справочник стран (требуется access-токен)
   - name: languages
     description: Справочник языков (требуется access-токен)
+  - name: crime-categories
+    description: Справочник категорий преступлений (требуется access-токен)
 paths:
   /api/v1/health:
     get:
@@ -692,6 +694,147 @@ paths:
           $ref: '#/components/responses/RefDataInUse'
         '500':
           $ref: '#/components/responses/InternalError'
+  /api/v1/crime-categories:
+    get:
+      tags:
+        - crime-categories
+      summary: Список категорий преступлений
+      description: |
+        Возвращает страницу справочника категорий преступлений с поиском и сортировкой.
+
+        - `search` — регистронезависимый поиск по подстроке в названии; спецсимволы `%`, `_` и `\`
+          трактуются как обычные символы.
+        - `sort` — поле сортировки (`id`, `name`, `created_at`), `dir` — направление.
+          Без `sort` используется сортировка по `name`. `dir` без `sort` — ошибка `400`.
+        - При равных значениях поля порядок дополнительно фиксируется по `id`,
+          поэтому строки не дублируются и не пропадают между страницами.
+      operationId: crimeCategoriesList
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/Dir'
+      responses:
+        '200':
+          description: Страница списка категорий преступлений
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefDataListResponse'
+              example:
+                items:
+                  - id: 1
+                    name: Кража
+                    created_at: '2026-10-22T08:40:22Z'
+                  - id: 2
+                    name: Мошенничество
+                    created_at: '2026-10-22T08:41:05Z'
+                total: 2
+                page: 1
+                per_page: 20
+        '400':
+          $ref: '#/components/responses/InvalidListParams'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags:
+        - crime-categories
+      summary: Создать категорию преступления
+      description: |
+        Добавляет категорию преступления в справочник. Пробелы по краям названия обрезаются.
+        Названия уникальны **без учёта регистра**: «Кража» и «кража» — дубликаты.
+        При дубликате вернётся `422` с `errors.name`.
+      operationId: crimeCategoriesCreate
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRefDataRequest'
+            example:
+              name: Кража
+      responses:
+        '201':
+          description: Категория преступления создана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CrimeCategory'
+        '400':
+          $ref: '#/components/responses/InvalidBody'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/RefDataValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/crime-categories/autocomplete:
+    get:
+      tags:
+        - crime-categories
+      summary: Автодополнение категорий преступлений
+      description: |
+        Возвращает не более 10 категорий для подсказок в форме. Совпадения по началу названия
+        идут первыми, остальные (по подстроке) — после них, внутри групп — по алфавиту.
+        Без `search` возвращаются первые 10 категорий по алфавиту.
+      operationId: crimeCategoriesAutocomplete
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - $ref: '#/components/parameters/Search'
+      responses:
+        '200':
+          description: Список подсказок
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutocompleteResponse'
+              example:
+                items:
+                  - id: 1
+                    label: Кража
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/crime-categories/{id}:
+    delete:
+      tags:
+        - crime-categories
+      summary: Удалить категорию преступления
+      description: |
+        Удаляет категорию преступления из справочника.
+
+        Операция идемпотентна: если категории с таким `id` уже нет, всё равно
+        вернётся `204` — повторный вызов `DELETE` не считается ошибкой.
+        `404` для этого эндпоинта не возвращается.
+
+        Если на категорию ссылаются другие записи,
+        удаление запрещено и вернётся `409`.
+      operationId: crimeCategoriesDelete
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - $ref: '#/components/parameters/RefDataId'
+      responses:
+        '204':
+          description: |
+            Категория удалена или уже отсутствовала (тело ответа пустое).
+        '400':
+          $ref: '#/components/responses/InvalidId'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/RefDataInUse'
+        '500':
+          $ref: '#/components/responses/InternalError'
 components:
   securitySchemes:
     bearerAuth:
@@ -879,7 +1022,7 @@ components:
         - items
     RefData:
       type: object
-      description: Запись справочника (страны, языки).
+      description: Запись справочника (страны, языки, категории преступлений).
       properties:
         id:
           type: integer
@@ -897,6 +1040,8 @@ components:
     Country:
       $ref: '#/components/schemas/RefData'
     Language:
+      $ref: '#/components/schemas/RefData'
+    CrimeCategory:
       $ref: '#/components/schemas/RefData'
     CreateRefDataRequest:
       type: object
