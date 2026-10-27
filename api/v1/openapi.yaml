@@ -431,33 +431,15 @@ paths:
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/PerPage'
         - $ref: '#/components/parameters/Search'
-        - name: sort
-          in: query
-          description: Поле сортировки. По умолчанию `name`.
-          required: false
-          schema:
-            type: string
-            enum:
-              - id
-              - name
-              - created_at
-        - name: dir
-          in: query
-          description: Направление сортировки. Если задан `sort`, а `dir` нет, используется `asc`.
-          required: false
-          schema:
-            type: string
-            enum:
-              - asc
-              - desc
-            default: asc
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/Dir'
       responses:
         '200':
           description: Страница списка стран
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CountryListResponse'
+                $ref: '#/components/schemas/RefDataListResponse'
               example:
                 items:
                   - id: 1
@@ -470,28 +452,7 @@ paths:
                 page: 1
                 per_page: 20
         '400':
-          description: Некорректные параметры пагинации или сортировки
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              examples:
-                page:
-                  summary: Некорректная страница
-                  value:
-                    message: page must be an integer
-                perPage:
-                  summary: per_page вне допустимого диапазона
-                  value:
-                    message: per_page must be in [1,100]
-                sortField:
-                  summary: Неизвестное поле сортировки
-                  value:
-                    message: unknown sort field password
-                sortDir:
-                  summary: Некорректное направление
-                  value:
-                    message: 'invalid sort direction "up": must be "asc" or "desc"'
+          $ref: '#/components/responses/InvalidListParams'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '500':
@@ -512,7 +473,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateCountryRequest'
+              $ref: '#/components/schemas/CreateRefDataRequest'
             example:
               name: Россия
       responses:
@@ -527,26 +488,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
         '422':
-          description: Ошибка валидации или такая страна уже существует
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationError'
-              examples:
-                invalid:
-                  summary: Пустое название
-                  value:
-                    message: The given data was invalid
-                    errors:
-                      name:
-                        - Field name is required
-                exists:
-                  summary: Страна уже существует
-                  value:
-                    message: The given data was invalid
-                    errors:
-                      name:
-                        - ref data already exists
+          $ref: '#/components/responses/RefDataValidationError'
         '500':
           $ref: '#/components/responses/InternalError'
   /api/v1/countries/autocomplete:
@@ -569,7 +511,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CountryAutocompleteResponse'
+                $ref: '#/components/schemas/AutocompleteResponse'
               example:
                 items:
                   - id: 1
@@ -596,37 +538,17 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          description: Идентификатор страны (положительное целое).
-          schema:
-            type: integer
-            format: int64
-            minimum: 1
-            example: 1
+        - $ref: '#/components/parameters/RefDataId'
       responses:
         '204':
           description: |
             Страна удалена или уже отсутствовала (тело ответа пустое).
         '400':
-          description: Идентификатор не является положительным целым числом
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              example:
-                message: Id must be a positive integer
+          $ref: '#/components/responses/InvalidId'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '409':
-          description: Страна используется в других записях
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              example:
-                message: ref data is in use
+          $ref: '#/components/responses/RefDataInUse'
         '500':
           $ref: '#/components/responses/InternalError'
   /api/v1/languages:
@@ -650,33 +572,15 @@ paths:
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/PerPage'
         - $ref: '#/components/parameters/Search'
-        - name: sort
-          in: query
-          description: Поле сортировки. По умолчанию `name`.
-          required: false
-          schema:
-            type: string
-            enum:
-              - id
-              - name
-              - created_at
-        - name: dir
-          in: query
-          description: Направление сортировки. Если задан `sort`, а `dir` нет, используется `asc`.
-          required: false
-          schema:
-            type: string
-            enum:
-              - asc
-              - desc
-            default: asc
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/Dir'
       responses:
         '200':
           description: Страница списка языков
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LanguageListResponse'
+                $ref: '#/components/schemas/RefDataListResponse'
               example:
                 items:
                   - id: 1
@@ -689,28 +593,7 @@ paths:
                 page: 1
                 per_page: 20
         '400':
-          description: Некорректные параметры пагинации или сортировки
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              examples:
-                page:
-                  summary: Некорректная страница
-                  value:
-                    message: page must be an integer
-                perPage:
-                  summary: per_page вне допустимого диапазона
-                  value:
-                    message: per_page must be in [1,100]
-                sortField:
-                  summary: Неизвестное поле сортировки
-                  value:
-                    message: unknown sort field password
-                sortDir:
-                  summary: Некорректное направление
-                  value:
-                    message: 'invalid sort direction "up": must be "asc" or "desc"'
+          $ref: '#/components/responses/InvalidListParams'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '500':
@@ -731,7 +614,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateLanguageRequest'
+              $ref: '#/components/schemas/CreateRefDataRequest'
             example:
               name: Русский
       responses:
@@ -746,26 +629,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
         '422':
-          description: Ошибка валидации или такой язык уже существует
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationError'
-              examples:
-                invalid:
-                  summary: Пустое название
-                  value:
-                    message: The given data was invalid
-                    errors:
-                      name:
-                        - Field name is required
-                exists:
-                  summary: Язык уже существует
-                  value:
-                    message: The given data was invalid
-                    errors:
-                      name:
-                        - ref data already exists
+          $ref: '#/components/responses/RefDataValidationError'
         '500':
           $ref: '#/components/responses/InternalError'
   /api/v1/languages/autocomplete:
@@ -788,7 +652,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LanguageAutocompleteResponse'
+                $ref: '#/components/schemas/AutocompleteResponse'
               example:
                 items:
                   - id: 1
@@ -815,37 +679,17 @@ paths:
       security:
         - bearerAuth: [ ]
       parameters:
-        - name: id
-          in: path
-          required: true
-          description: Идентификатор языка (положительное целое).
-          schema:
-            type: integer
-            format: int64
-            minimum: 1
-            example: 1
+        - $ref: '#/components/parameters/RefDataId'
       responses:
         '204':
           description: |
             Язык удалён или уже отсутствовал (тело ответа пустое).
         '400':
-          description: Идентификатор не является положительным целым числом
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              example:
-                message: Id must be a positive integer
+          $ref: '#/components/responses/InvalidId'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '409':
-          description: Язык используется в других записях
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              example:
-                message: ref data is in use
+          $ref: '#/components/responses/RefDataInUse'
         '500':
           $ref: '#/components/responses/InternalError'
 components:
@@ -1010,64 +854,6 @@ components:
       required:
         - message
         - errors
-    Country:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int64
-          example: 1
-        name:
-          type: string
-          example: Россия
-        created_at:
-          type: string
-          format: date-time
-      required:
-        - id
-        - name
-        - created_at
-    CreateCountryRequest:
-      type: object
-      required:
-        - name
-      properties:
-        name:
-          type: string
-          maxLength: 255
-          description: Не пустое и не состоит из одних пробелов. Уникально без учёта регистра.
-          example: Россия
-    CountryListResponse:
-      type: object
-      properties:
-        items:
-          type: array
-          items:
-            $ref: '#/components/schemas/Country'
-        total:
-          type: integer
-          description: Общее число записей с учётом `search` (не только на текущей странице).
-          example: 42
-        page:
-          type: integer
-          example: 1
-        per_page:
-          type: integer
-          example: 20
-      required:
-        - items
-        - total
-        - page
-        - per_page
-    CountryAutocompleteResponse:
-      type: object
-      properties:
-        items:
-          type: array
-          items:
-            $ref: '#/components/schemas/AutocompleteItem'
-      required:
-        - items
     AutocompleteItem:
       type: object
       properties:
@@ -1081,8 +867,19 @@ components:
       required:
         - id
         - label
-    Language:
+    AutocompleteResponse:
       type: object
+      description: Ответ автодополнения; не привязан к конкретному справочнику.
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AutocompleteItem'
+      required:
+        - items
+    RefData:
+      type: object
+      description: Запись справочника (страны, языки).
       properties:
         id:
           type: integer
@@ -1090,7 +887,6 @@ components:
           example: 1
         name:
           type: string
-          example: Русский
         created_at:
           type: string
           format: date-time
@@ -1098,7 +894,11 @@ components:
         - id
         - name
         - created_at
-    CreateLanguageRequest:
+    Country:
+      $ref: '#/components/schemas/RefData'
+    Language:
+      $ref: '#/components/schemas/RefData'
+    CreateRefDataRequest:
       type: object
       required:
         - name
@@ -1107,17 +907,16 @@ components:
           type: string
           maxLength: 255
           description: Не пустое и не состоит из одних пробелов. Уникально без учёта регистра.
-          example: Русский
-    LanguageListResponse:
+          example: Россия
+    PaginationResponse:
       type: object
+      description: |
+        Общая часть постраничных ответов. Поле `items` в этой схеме нет: OpenAPI 3.0 не поддерживает
+        дженерики, поэтому конкретный ответ расширяет её через `allOf` и добавляет `items` своего типа.
       properties:
-        items:
-          type: array
-          items:
-            $ref: '#/components/schemas/Language'
         total:
           type: integer
-          description: Общее число записей с учётом `search` (не только на текущей странице).
+          description: Общее число записей с учётом фильтров (не только на текущей странице).
           example: 42
         page:
           type: integer
@@ -1126,19 +925,20 @@ components:
           type: integer
           example: 20
       required:
-        - items
         - total
         - page
         - per_page
-    LanguageAutocompleteResponse:
-      type: object
-      properties:
-        items:
-          type: array
-          items:
-            $ref: '#/components/schemas/AutocompleteItem'
-      required:
-        - items
+    RefDataListResponse:
+      allOf:
+        - $ref: '#/components/schemas/PaginationResponse'
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/RefData'
+          required:
+            - items
   parameters:
     Page:
       name: page
@@ -1167,6 +967,38 @@ components:
       required: false
       schema:
         type: string
+    Sort:
+      name: sort
+      in: query
+      description: Поле сортировки. По умолчанию `name`.
+      required: false
+      schema:
+        type: string
+        enum:
+          - id
+          - name
+          - created_at
+    Dir:
+      name: dir
+      in: query
+      description: Направление сортировки. Если задан `sort`, а `dir` нет, используется `asc`.
+      required: false
+      schema:
+        type: string
+        enum:
+          - asc
+          - desc
+        default: asc
+    RefDataId:
+      name: id
+      in: path
+      required: true
+      description: Идентификатор записи справочника (положительное целое).
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+        example: 1
   headers:
     SetRefreshCookie:
       description: |
@@ -1230,3 +1062,63 @@ components:
             $ref: '#/components/schemas/Error'
           example:
             message: Internal Server Error
+    InvalidListParams:
+      description: Некорректные параметры пагинации или сортировки
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            page:
+              summary: Некорректная страница
+              value:
+                message: page must be an integer
+            perPage:
+              summary: per_page вне допустимого диапазона
+              value:
+                message: per_page must be in [1,100]
+            sortField:
+              summary: Неизвестное поле сортировки
+              value:
+                message: unknown sort field password
+            sortDir:
+              summary: Некорректное направление
+              value:
+                message: 'invalid sort direction "up": must be "asc" or "desc"'
+    InvalidId:
+      description: Идентификатор не является положительным целым числом
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: Id must be a positive integer
+    RefDataValidationError:
+      description: Ошибка валидации или запись с таким названием уже существует
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationError'
+          examples:
+            invalid:
+              summary: Пустое название
+              value:
+                message: The given data was invalid
+                errors:
+                  name:
+                    - Field name is required
+            exists:
+              summary: Запись уже существует
+              value:
+                message: The given data was invalid
+                errors:
+                  name:
+                    - ref data already exists
+    RefDataInUse:
+      description: Запись используется в других записях, удаление запрещено
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: ref data is in use
