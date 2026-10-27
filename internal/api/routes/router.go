@@ -15,6 +15,7 @@ type Deps struct {
 	Profile       ProfileHandler
 	Country       CountryHandler
 	Language      LanguageHandler
+	CrimeCategory CrimeCategoryHandler
 	Authenticate  Middleware
 	CORS          Middleware
 	TrustedOrigin Middleware
@@ -27,6 +28,7 @@ func NewRouter(d Deps) http.Handler {
 	registerProfileHandler(api, d.Profile, d.Authenticate)
 	registerCountryHandler(api, d.Country, d.Authenticate)
 	registerLanguageHandler(api, d.Language, d.Authenticate)
+	registerCrimeCategoryHandler(api, d.CrimeCategory, d.Authenticate)
 
 	mux := http.NewServeMux()
 	mux.Handle("/api/v1/", http.StripPrefix("/api/v1", api))
