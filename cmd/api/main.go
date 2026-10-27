@@ -12,6 +12,7 @@ import (
 	authHandler "icpo-backend/internal/api/handlers/auth"
 	countryHandler "icpo-backend/internal/api/handlers/country"
 	crimecategoryHandler "icpo-backend/internal/api/handlers/crime-category"
+	hairColorHandler "icpo-backend/internal/api/handlers/hair-color"
 	healthHandler "icpo-backend/internal/api/handlers/health"
 	languageHandler "icpo-backend/internal/api/handlers/language"
 	profileHandler "icpo-backend/internal/api/handlers/profile"
@@ -22,6 +23,7 @@ import (
 	authDomain "icpo-backend/internal/domain/auth"
 	countryDomain "icpo-backend/internal/domain/country"
 	crimeCategoryDomain "icpo-backend/internal/domain/crime-category"
+	hairColorDomain "icpo-backend/internal/domain/hair-color"
 	languageDomain "icpo-backend/internal/domain/language"
 	profileDomain "icpo-backend/internal/domain/profile"
 	tokenDomain "icpo-backend/internal/domain/token"
@@ -62,6 +64,7 @@ func run() error {
 	countryRepo := countryDomain.NewRepository(pool)
 	languageRepo := languageDomain.NewRepository(pool)
 	crimeCategoryRepo := crimeCategoryDomain.NewRepository(pool)
+	hairColorRepo := hairColorDomain.NewRepository(pool)
 
 	tokenSvc := tokenDomain.NewService(tokenRepo, tokenDomain.Config{
 		AccessTTL:  cfg.AccessTTL,
@@ -79,6 +82,7 @@ func run() error {
 	countrySvc := countryDomain.NewService(countryRepo)
 	languageSvc := languageDomain.NewService(languageRepo)
 	crimeCategorySvc := crimeCategoryDomain.NewService(crimeCategoryRepo)
+	hairColorSvc := hairColorDomain.NewService(hairColorRepo)
 
 	cookiesManager := cookies.NewManager(cookies.Options{
 		Path:     "/api/v1/auth",
@@ -95,6 +99,7 @@ func run() error {
 	countryH := countryHandler.NewHandler(countrySvc)
 	languageH := languageHandler.NewHandler(languageSvc)
 	crimeCategoryH := crimecategoryHandler.NewHandler(crimeCategorySvc)
+	hairColorH := hairColorHandler.NewHandler(hairColorSvc)
 
 	router := routes.NewRouter(routes.Deps{
 		Health:        healthH,
@@ -104,6 +109,7 @@ func run() error {
 		Country:       countryH,
 		Language:      languageH,
 		CrimeCategory: crimeCategoryH,
+		HairColor:     hairColorH,
 		Authenticate:  middleware.Authenticate(tokenSvc),
 		CORS:          middleware.CORS(cfg.CORSAllowedOrigins),
 		TrustedOrigin: middleware.RequireTrustedOrigin(cfg.CORSAllowedOrigins),
