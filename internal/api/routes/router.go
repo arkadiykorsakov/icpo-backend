@@ -17,6 +17,7 @@ type Deps struct {
 	Language      LanguageHandler
 	CrimeCategory CrimeCategoryHandler
 	HairColor     HairColorHandler
+	EyeColor      EyeColorHandler
 	Authenticate  Middleware
 	CORS          Middleware
 	TrustedOrigin Middleware
@@ -31,6 +32,7 @@ func NewRouter(d Deps) http.Handler {
 	registerLanguageHandler(api, d.Language, d.Authenticate)
 	registerCrimeCategoryHandler(api, d.CrimeCategory, d.Authenticate)
 	registerHairColorHandler(api, d.HairColor, d.Authenticate)
+	registerEyeColorHandler(api, d.EyeColor, d.Authenticate)
 
 	mux := http.NewServeMux()
 	mux.Handle("/api/v1/", http.StripPrefix("/api/v1", api))
