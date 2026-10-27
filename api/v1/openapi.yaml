@@ -571,7 +571,7 @@ paths:
           поэтому строки не дублируются и не пропадают между страницами.
       operationId: languagesList
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/PerPage'
@@ -612,7 +612,7 @@ paths:
         При дубликате вернётся `422` с `errors.name`.
       operationId: languagesCreate
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -647,7 +647,7 @@ paths:
         Без `search` возвращаются первые 10 языков по алфавиту.
       operationId: languagesAutocomplete
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/Search'
       responses:
@@ -681,7 +681,7 @@ paths:
         удаление запрещено и вернётся `409`.
       operationId: languagesDelete
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/RefDataId'
       responses:
@@ -712,7 +712,7 @@ paths:
           поэтому строки не дублируются и не пропадают между страницами.
       operationId: crimeCategoriesList
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/PerPage'
@@ -753,7 +753,7 @@ paths:
         При дубликате вернётся `422` с `errors.name`.
       operationId: crimeCategoriesCreate
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -788,7 +788,7 @@ paths:
         Без `search` возвращаются первые 10 категорий по алфавиту.
       operationId: crimeCategoriesAutocomplete
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/Search'
       responses:
@@ -822,7 +822,7 @@ paths:
         удаление запрещено и вернётся `409`.
       operationId: crimeCategoriesDelete
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/RefDataId'
       responses:
@@ -853,7 +853,7 @@ paths:
           поэтому строки не дублируются и не пропадают между страницами.
       operationId: hairColorsList
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/PerPage'
@@ -894,7 +894,7 @@ paths:
         При дубликате вернётся `422` с `errors.name`.
       operationId: hairColorsCreate
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -919,65 +919,206 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
   /api/v1/hair-colors/autocomplete:
-      get:
-        tags:
-          - hair-colors
-        summary: Автодополнение цветов волос
-        description: |
-          Возвращает не более 10 цветов волос для подсказок в форме. Совпадения по началу названия
-          идут первыми, остальные (по подстроке) — после них, внутри групп — по алфавиту.
-          Без `search` возвращаются первые 10 цветов волос по алфавиту.
-        operationId: hairColorsAutocomplete
-        security:
-          - bearerAuth: [ ]
-        parameters:
-          - $ref: '#/components/parameters/Search'
-        responses:
-          '200':
-            description: Список подсказок
-            content:
-              application/json:
-                schema:
-                  $ref: '#/components/schemas/AutocompleteResponse'
-                example:
-                  items:
-                    - id: 1
-                      label: Русый
-          '401':
-            $ref: '#/components/responses/Unauthorized'
-          '500':
-            $ref: '#/components/responses/InternalError'
-    /api/v1/hair-colors/{id}:
-      delete:
-        tags:
-          - hair-colors
-        summary: Удалить цвет волос
-        description: |
-          Удаляет цвет волос из справочника.
+    get:
+      tags:
+        - hair-colors
+      summary: Автодополнение цветов волос
+      description: |
+        Возвращает не более 10 цветов волос для подсказок в форме. Совпадения по началу названия
+        идут первыми, остальные (по подстроке) — после них, внутри групп — по алфавиту.
+        Без `search` возвращаются первые 10 цветов волос по алфавиту.
+      operationId: hairColorsAutocomplete
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Search'
+      responses:
+        '200':
+          description: Список подсказок
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutocompleteResponse'
+              example:
+                items:
+                  - id: 1
+                    label: Русый
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/hair-colors/{id}:
+    delete:
+      tags:
+        - hair-colors
+      summary: Удалить цвет волос
+      description: |
+        Удаляет цвет волос из справочника.
+        
+        Операция идемпотентна: если цвета волос с таким `id` уже нет, всё равно
+        вернётся `204` — повторный вызов `DELETE` не считается ошибкой.
+        `404` для этого эндпоинта не возвращается.
+        
+        Если на цвет волос ссылаются другие записи,
+        удаление запрещено и вернётся `409`.
+      operationId: hairColorsDelete
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/RefDataId'
+      responses:
+        '204':
+          description: |
+            Цвет волос удалён или уже отсутствовал (тело ответа пустое).
+        '400':
+          $ref: '#/components/responses/InvalidId'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/RefDataInUse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/eye-colors:
+    get:
+      tags:
+        - eye-colors
+      summary: Список цветов глаз
+      description: |
+        Возвращает страницу справочника цветов глаз с поиском и сортировкой.
+        
+        - `search` — регистронезависимый поиск по подстроке в названии; спецсимволы `%`, `_` и `\`
+          трактуются как обычные символы.
+        - `sort` — поле сортировки (`id`, `name`, `created_at`), `dir` — направление.
+          Без `sort` используется сортировка по `name`. `dir` без `sort` — ошибка `400`.
+        - При равных значениях поля порядок дополнительно фиксируется по `id`,
+          поэтому строки не дублируются и не пропадают между страницами.
+      operationId: eyeColorsList
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/Dir'
+      responses:
+        '200':
+          description: Страница списка цветов глаз
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefDataListResponse'
+              example:
+                items:
+                  - id: 1
+                    name: Карий
+                    created_at: '2026-10-22T08:40:22Z'
+                  - id: 2
+                    name: Голубой
+                    created_at: '2026-10-22T08:41:05Z'
+                total: 2
+                page: 1
+                per_page: 20
+        '400':
+          $ref: '#/components/responses/InvalidListParams'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags:
+        - eye-colors
+      summary: Создать цвет глаз
+      description: |
+        Добавляет цвет глаз в справочник. Пробелы по краям названия обрезаются.
+        Названия уникальны **без учёта регистра**: «Карий» и «карий» — дубликаты.
+        При дубликате вернётся `422` с `errors.name`.
+      operationId: eyeColorsCreate
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRefDataRequest'
+            example:
+              name: Карий
+      responses:
+        '201':
+          description: Цвет глаз создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EyeColor'
+        '400':
+          $ref: '#/components/responses/InvalidBody'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/RefDataValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/eye-colors/autocomplete:
+    get:
+      tags:
+        - eye-colors
+      summary: Автодополнение цветов глаз
+      description: |
+        Возвращает не более 10 цветов глаз для подсказок в форме. Совпадения по началу названия
+        идут первыми, остальные (по подстроке) — после них, внутри групп — по алфавиту.
+        Без `search` возвращаются первые 10 цветов глаз по алфавиту.
+      operationId: eyeColorsAutocomplete
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Search'
+      responses:
+        '200':
+          description: Список подсказок
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutocompleteResponse'
+              example:
+                items:
+                  - id: 1
+                    label: Карий
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/eye-colors/{id}:
+    delete:
+      tags:
+        - eye-colors
+      summary: Удалить цвет глаз
+      description: |
+        Удаляет цвет глаз из справочника.
 
-          Операция идемпотентна: если цвета волос с таким `id` уже нет, всё равно
-          вернётся `204` — повторный вызов `DELETE` не считается ошибкой.
-          `404` для этого эндпоинта не возвращается.
+        Операция идемпотентна: если цвета глаз с таким `id` уже нет, всё равно
+        вернётся `204` — повторный вызов `DELETE` не считается ошибкой.
+        `404` для этого эндпоинта не возвращается.
 
-          Если на цвет волос ссылаются другие записи,
-          удаление запрещено и вернётся `409`.
-        operationId: hairColorsDelete
-        security:
-          - bearerAuth: [ ]
-        parameters:
-          - $ref: '#/components/parameters/RefDataId'
-        responses:
-          '204':
-            description: |
-              Цвет волос удалён или уже отсутствовал (тело ответа пустое).
-          '400':
-            $ref: '#/components/responses/InvalidId'
-          '401':
-            $ref: '#/components/responses/Unauthorized'
-          '409':
-            $ref: '#/components/responses/RefDataInUse'
-          '500':
-            $ref: '#/components/responses/InternalError'
+        Если на цвет глаз ссылаются другие записи,
+        удаление запрещено и вернётся `409`.
+      operationId: eyeColorsDelete
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/RefDataId'
+      responses:
+        '204':
+          description: |
+            Цвет глаз удалён или уже отсутствовал (тело ответа пустое).
+        '400':
+          $ref: '#/components/responses/InvalidId'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/RefDataInUse'
+        '500':
+          $ref: '#/components/responses/InternalError'
 components:
   securitySchemes:
     bearerAuth:
@@ -1187,6 +1328,8 @@ components:
     CrimeCategory:
       $ref: '#/components/schemas/RefData'
     HairColor:
+      $ref: '#/components/schemas/RefData'
+    EyeColor:
       $ref: '#/components/schemas/RefData'
     CreateRefDataRequest:
       type: object
