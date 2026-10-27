@@ -7,4 +7,5 @@ var registry = []Seeder{
 	NameList("countries"),
 	NameList("languages"),
 	NameList("crime_categories"),
+	NameList("hair_colors"),
 }
