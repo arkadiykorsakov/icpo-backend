@@ -51,13 +51,13 @@ Table languages {
   }
 }
 
-Table professions {
+Table crime_categories {
   id         BIGSERIAL   [pk]
   name       TEXT        [not null]
   created_at TIMESTAMPTZ [not null, default: `NOW()`]
 
   indexes {
-    `lower(name)` [unique, name: 'professions_name_ci']
+    `lower(name)` [unique, name: 'crime_categories_name_ci']
   }
 }
 
@@ -162,12 +162,12 @@ Table citizenships {
   Note: 'ON DELETE CASCADE'
 }
 
-Table criminal_professions {
-  criminal_id  BIGINT [not null, ref: > criminals.id]
-  profession_id BIGINT [not null, ref: > professions.id]
+Table criminal_crime_categories {
+  criminal_id      BIGINT [not null, ref: > criminals.id]
+  crime_category_id BIGINT [not null, ref: > crime_categories.id]
 
   indexes {
-    (criminal_id, profession_id) [pk]
+    (criminal_id, crime_category_id) [pk]
   }
 
   Note: 'ON DELETE CASCADE'
