@@ -321,7 +321,6 @@ var registry = []Seeder{
 go run ./cmd/seed -list     # сидер появился в списке
 go run ./cmd/seed example   # inserted=N skipped=0
 go run ./cmd/seed example   # повторно: inserted=0 — дублей нет
-go test ./internal/infrastructure/database/seeder/...
 ```
 
 ### Ограничения

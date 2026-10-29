@@ -32,9 +32,9 @@ Table refresh_tokens {
 // ============================================================
 
 Table countries {
-  id         BIGSERIAL   [pk]
-  name       TEXT        [not null]
-  created_at TIMESTAMPTZ [not null, default: `NOW()`]
+  id         BIGSERIAL    [pk]
+  name       VARCHAR(255) [not null]
+  created_at TIMESTAMPTZ  [not null, default: `NOW()`]
 
   indexes {
     `lower(name)` [unique, name: 'countries_name_ci']
@@ -42,9 +42,9 @@ Table countries {
 }
 
 Table languages {
-  id         BIGSERIAL   [pk]
-  name       TEXT        [not null]
-  created_at TIMESTAMPTZ [not null, default: `NOW()`]
+  id         BIGSERIAL    [pk]
+  name       VARCHAR(255) [not null]
+  created_at TIMESTAMPTZ  [not null, default: `NOW()`]
 
   indexes {
     `lower(name)` [unique, name: 'languages_name_ci']
@@ -52,9 +52,9 @@ Table languages {
 }
 
 Table crime_categories {
-  id         BIGSERIAL   [pk]
-  name       TEXT        [not null]
-  created_at TIMESTAMPTZ [not null, default: `NOW()`]
+  id         BIGSERIAL    [pk]
+  name       VARCHAR(255) [not null]
+  created_at TIMESTAMPTZ  [not null, default: `NOW()`]
 
   indexes {
     `lower(name)` [unique, name: 'crime_categories_name_ci']
@@ -62,9 +62,9 @@ Table crime_categories {
 }
 
 Table hair_colors {
-  id         BIGSERIAL   [pk]
-  name       TEXT        [not null]
-  created_at TIMESTAMPTZ [not null, default: `NOW()`]
+  id         BIGSERIAL    [pk]
+  name       VARCHAR(255) [not null]
+  created_at TIMESTAMPTZ  [not null, default: `NOW()`]
 
   indexes {
     `lower(name)` [unique, name: 'hair_colors_name_ci']
@@ -72,9 +72,9 @@ Table hair_colors {
 }
 
 Table eye_colors {
-  id         BIGSERIAL   [pk]
-  name       TEXT        [not null]
-  created_at TIMESTAMPTZ [not null, default: `NOW()`]
+  id         BIGSERIAL    [pk]
+  name       VARCHAR(255) [not null]
+  created_at TIMESTAMPTZ  [not null, default: `NOW()`]
 
   indexes {
     `lower(name)` [unique, name: 'eye_colors_name_ci']
@@ -82,13 +82,14 @@ Table eye_colors {
 }
 
 Table cities {
-  id         BIGSERIAL   [pk]
-  name       TEXT        [not null]
-  country_id BIGINT      [not null, ref: > countries.id]
-  created_at TIMESTAMPTZ [not null, default: `NOW()`]
+  id         BIGSERIAL    [pk]
+  name       VARCHAR(255) [not null]
+  country_id BIGINT       [not null, ref: > countries.id]
+  created_at TIMESTAMPTZ  [not null, default: `NOW()`]
 
   indexes {
-    (`lower(name)`, country_id) [unique, name: 'cities_name_ci']
+    (`lower(name)`, country_id) [unique, name: 'cities_name_ci'],
+    country_id [name: 'cities_country_id_idx']
   }
 }
 

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	authHandler "icpo-backend/internal/api/handlers/auth"
+	cityHandler "icpo-backend/internal/api/handlers/city"
 	countryHandler "icpo-backend/internal/api/handlers/country"
 	crimecategoryHandler "icpo-backend/internal/api/handlers/crime-category"
 	eyeColorHandler "icpo-backend/internal/api/handlers/eye-color"
@@ -22,6 +23,7 @@ import (
 	"icpo-backend/internal/api/routes"
 	"icpo-backend/internal/config"
 	authDomain "icpo-backend/internal/domain/auth"
+	cityDomain "icpo-backend/internal/domain/city"
 	countryDomain "icpo-backend/internal/domain/country"
 	crimeCategoryDomain "icpo-backend/internal/domain/crime-category"
 	eyeColorDomain "icpo-backend/internal/domain/eye-color"
@@ -68,6 +70,7 @@ func run() error {
 	crimeCategoryRepo := crimeCategoryDomain.NewRepository(pool)
 	hairColorRepo := hairColorDomain.NewRepository(pool)
 	eyeColorRepo := eyeColorDomain.NewRepository(pool)
+	cityRepo := cityDomain.NewRepository(pool)
 
 	tokenSvc := tokenDomain.NewService(tokenRepo, tokenDomain.Config{
 		AccessTTL:  cfg.AccessTTL,
@@ -87,6 +90,7 @@ func run() error {
 	crimeCategorySvc := crimeCategoryDomain.NewService(crimeCategoryRepo)
 	hairColorSvc := hairColorDomain.NewService(hairColorRepo)
 	eyeColorSvc := eyeColorDomain.NewService(eyeColorRepo)
+	citySvc := cityDomain.NewService(cityRepo, countryRepo)
 
 	cookiesManager := cookies.NewManager(cookies.Options{
 		Path:     "/api/v1/auth",
@@ -105,6 +109,7 @@ func run() error {
 	crimeCategoryH := crimecategoryHandler.NewHandler(crimeCategorySvc)
 	hairColorH := hairColorHandler.NewHandler(hairColorSvc)
 	eyeColorH := eyeColorHandler.NewHandler(eyeColorSvc)
+	cityH := cityHandler.NewHandler(citySvc)
 
 	router := routes.NewRouter(routes.Deps{
 		Health:        healthH,
@@ -116,6 +121,7 @@ func run() error {
 		CrimeCategory: crimeCategoryH,
 		HairColor:     hairColorH,
 		EyeColor:      eyeColorH,
+		City:          cityH,
 		Authenticate:  middleware.Authenticate(tokenSvc),
 		CORS:          middleware.CORS(cfg.CORSAllowedOrigins),
 		TrustedOrigin: middleware.RequireTrustedOrigin(cfg.CORSAllowedOrigins),

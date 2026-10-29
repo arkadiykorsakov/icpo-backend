@@ -5,12 +5,9 @@ import (
 	"icpo-backend/pkg/sorting"
 )
 
-type FilterParams struct {
-	Search string
-}
-
-type ListParams struct {
-	Filter     FilterParams
+type ListParams[T any] struct {
+	Search     string
+	Filter     T
 	Pagination pagination.Params
 	Sort       sorting.Params
 }

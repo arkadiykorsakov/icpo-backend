@@ -3,6 +3,7 @@ package httpx
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 )
@@ -21,6 +22,21 @@ func GetIDFromRequest(w http.ResponseWriter, r *http.Request) (int64, error) {
 	}
 
 	return id, nil
+}
+
+func ParseQueryNumber(r *http.Request, name string, allowNegative bool) (n int64, present bool, err error) {
+	s := r.URL.Query().Get(name)
+	if s == "" {
+		return 0, false, nil
+	}
+	n, err = strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		return 0, true, fmt.Errorf("%s must be an integer", name)
+	}
+	if !allowNegative && n < 0 {
+		return 0, true, fmt.Errorf("%s must be a non-negative integer", name)
+	}
+	return n, true, nil
 }
 
 func DecodeJSON(w http.ResponseWriter, r *http.Request, dst any) error {

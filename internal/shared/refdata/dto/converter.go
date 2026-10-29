@@ -1,20 +1,24 @@
 package dto
 
-import "reflect"
+import (
+	"reflect"
 
-func ToAutocompleteResponse[T any](p T) AutocompleteResponse {
+	"icpo-backend/pkg/autocomplete"
+)
+
+func ToAutocompleteResponse[T any](p T) autocomplete.AutocompleteResult {
 	v := reflect.ValueOf(p)
 	for v.Kind() == reflect.Pointer {
 		if v.IsNil() {
-			return AutocompleteResponse{}
+			return autocomplete.AutocompleteResult{}
 		}
 		v = v.Elem()
 	}
 	if v.Kind() != reflect.Struct {
-		return AutocompleteResponse{}
+		return autocomplete.AutocompleteResult{}
 	}
 
-	var resp AutocompleteResponse
+	var resp autocomplete.AutocompleteResult
 	if f := v.FieldByName("ID"); f.IsValid() && f.CanInt() {
 		resp.ID = f.Int()
 	}
@@ -22,12 +26,4 @@ func ToAutocompleteResponse[T any](p T) AutocompleteResponse {
 		resp.Label = f.String()
 	}
 	return resp
-}
-
-func ToAutocompleteResponses[T any](items []T) []AutocompleteResponse {
-	responses := make([]AutocompleteResponse, 0, len(items))
-	for _, p := range items {
-		responses = append(responses, ToAutocompleteResponse[T](p))
-	}
-	return responses
 }

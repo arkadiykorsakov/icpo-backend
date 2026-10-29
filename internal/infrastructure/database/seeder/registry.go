@@ -9,4 +9,5 @@ var registry = []Seeder{
 	NameList("crime_categories"),
 	NameList("hair_colors"),
 	NameList("eye_colors"),
+	CityList(), // зависит от countries
 }

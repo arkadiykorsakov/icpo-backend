@@ -65,6 +65,10 @@ tags:
     description: Справочник категорий преступлений (требуется access-токен)
   - name: hair-colors
     description: Справочник цветов волос (требуется access-токен)
+  - name: eye-colors
+    description: Справочник цветов глаз (требуется access-токен)
+  - name: cities
+    description: Справочник городов (требуется access-токен)
 paths:
   /api/v1/health:
     get:
@@ -1119,6 +1123,173 @@ paths:
           $ref: '#/components/responses/RefDataInUse'
         '500':
           $ref: '#/components/responses/InternalError'
+  /api/v1/cities:
+    get:
+      tags:
+        - cities
+      summary: Список городов
+      description: |
+        Возвращает страницу справочника городов. Каждый город содержит вложенный объект `country`.
+
+        - `search` — регистронезависимый поиск по подстроке в названии **города**; спецсимволы `%`, `_` и `\`
+          трактуются как обычные символы.
+        - `country_id` — фильтр по стране (положительное целое). Без параметра фильтра нет;
+          значение `0`, отрицательное или нецелое — ошибка `400`.
+        - `sort` — поле сортировки (`id`, `name`, `created_at`, `country_id`), `dir` — направление.
+          Без `sort` используется сортировка по `name`. `dir` без `sort` — ошибка `400`.
+        - При равных значениях поля порядок дополнительно фиксируется по `id`,
+          поэтому строки не дублируются и не пропадают между страницами.
+      operationId: citiesList
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/CountryIdFilter'
+        - $ref: '#/components/parameters/CitySort'
+        - $ref: '#/components/parameters/Dir'
+      responses:
+        '200':
+          description: Страница списка городов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CityListResponse'
+              example:
+                items:
+                  - id: 1
+                    name: Москва
+                    country:
+                      id: 1
+                      name: Россия
+                      created_at: '2026-10-22T08:40:22Z'
+                    created_at: '2026-10-27T10:19:15Z'
+                  - id: 2
+                    name: Берлин
+                    country:
+                      id: 2
+                      name: Германия
+                      created_at: '2026-10-22T08:40:23Z'
+                    created_at: '2026-10-27T10:20:01Z'
+                total: 2
+                page: 1
+                per_page: 20
+        '400':
+          $ref: '#/components/responses/InvalidCityListParams'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags:
+        - cities
+      summary: Создать город
+      description: |
+        Добавляет город в справочник. Пробелы по краям названия обрезаются.
+
+        Название уникально в пределах страны **без учёта регистра**: «Москва» и «москва» в одной стране —
+        дубликаты, а в разных странах допустимы. При дубликате вернётся `422` с `errors.name`.
+        Если страны с таким `country_id` нет, вернётся `422` с `errors.country_id`.
+      operationId: citiesCreate
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCityRequest'
+            example:
+              name: Москва
+              country_id: 1
+      responses:
+        '201':
+          description: Город создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/City'
+              example:
+                id: 1
+                name: Москва
+                country:
+                  id: 1
+                  name: Россия
+                  created_at: '2026-10-22T08:40:22Z'
+                created_at: '2026-10-27T10:19:15Z'
+        '400':
+          $ref: '#/components/responses/InvalidBody'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/CityValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/cities/autocomplete:
+    get:
+      tags:
+        - cities
+      summary: Автодополнение городов
+      description: |
+        Возвращает не более 10 городов для подсказок в форме. Поле `label` имеет вид «Город, Страна».
+
+        Совпадения по началу названия города идут первыми, остальные (по подстроке) — после них,
+        внутри групп — по алфавиту. Без `search` возвращаются первые 10 городов по алфавиту.
+        Параметр `country_id` ограничивает подсказки городами одной страны.
+      operationId: citiesAutocomplete
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/CountryIdFilter'
+      responses:
+        '200':
+          description: Список подсказок
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutocompleteResponse'
+              example:
+                items:
+                  - id: 1
+                    label: Москва, Россия
+        '400':
+          $ref: '#/components/responses/InvalidCountryIdFilter'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/cities/{id}:
+    delete:
+      tags:
+        - cities
+      summary: Удалить город
+      description: |
+        Удаляет город из справочника.
+
+        Операция идемпотентна: если города с таким `id` уже нет, всё равно
+        вернётся `204` — повторный вызов `DELETE` не считается ошибкой.
+        `404` для этого эндпоинта не возвращается.
+
+        Если на город ссылаются другие записи, удаление запрещено и вернётся `409`.
+      operationId: citiesDelete
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/RefDataId'
+      responses:
+        '204':
+          description: |
+            Город удалён или уже отсутствовал (тело ответа пустое).
+        '400':
+          $ref: '#/components/responses/InvalidId'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/CityInUse'
+        '500':
+          $ref: '#/components/responses/InternalError'
 components:
   securitySchemes:
     bearerAuth:
@@ -1372,6 +1543,57 @@ components:
                 $ref: '#/components/schemas/RefData'
           required:
             - items
+    City:
+      type: object
+      description: Город со вложенной страной.
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        name:
+          type: string
+          example: Москва
+        country:
+          $ref: '#/components/schemas/Country'
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - country
+        - created_at
+    CreateCityRequest:
+      type: object
+      required:
+        - name
+        - country_id
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          description: |
+            Не пустое и не состоит из одних пробелов.
+            Уникально в пределах страны без учёта регистра.
+          example: Москва
+        country_id:
+          type: integer
+          format: int64
+          minimum: 1
+          description: Идентификатор существующей страны.
+          example: 1
+    CityListResponse:
+      allOf:
+        - $ref: '#/components/schemas/PaginationResponse'
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/City'
+          required:
+            - items
   parameters:
     Page:
       name: page
@@ -1432,6 +1654,29 @@ components:
         format: int64
         minimum: 1
         example: 1
+    CountryIdFilter:
+      name: country_id
+      in: query
+      description: |
+        Фильтр по идентификатору страны. Без параметра фильтра нет.
+        Значение `0`, отрицательное или нецелое — ошибка `400`.
+      required: false
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+    CitySort:
+      name: sort
+      in: query
+      description: Поле сортировки. По умолчанию `name`.
+      required: false
+      schema:
+        type: string
+        enum:
+          - id
+          - name
+          - created_at
+          - country_id
   headers:
     SetRefreshCookie:
       description: |
@@ -1555,3 +1800,93 @@ components:
             $ref: '#/components/schemas/Error'
           example:
             message: ref data is in use
+    InvalidCountryIdFilter:
+      description: Параметр `country_id` не является положительным целым числом
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            notInteger:
+              summary: Не целое число
+              value:
+                message: country_id must be an integer
+            negative:
+              summary: Отрицательное значение
+              value:
+                message: country_id must be a non-negative integer
+            zero:
+              summary: Нулевое значение
+              value:
+                message: Invalid country id
+    InvalidCityListParams:
+      description: Некорректные параметры пагинации, сортировки или фильтра
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            page:
+              summary: Некорректная страница
+              value:
+                message: page must be an integer
+            perPage:
+              summary: per_page вне допустимого диапазона
+              value:
+                message: per_page must be in [1,100]
+            sortField:
+              summary: Неизвестное поле сортировки
+              value:
+                message: 'Wrong sort field: "password"'
+            sortDir:
+              summary: Некорректное направление
+              value:
+                message: 'invalid sort direction "up": must be "asc" or "desc"'
+            countryNotInteger:
+              summary: country_id не целое число
+              value:
+                message: country_id must be an integer
+            countryNegative:
+              summary: country_id отрицательный
+              value:
+                message: country_id must be a non-negative integer
+            countryZero:
+              summary: country_id равен нулю
+              value:
+                message: Invalid country id
+    CityValidationError:
+      description: Ошибка валидации, город уже существует в этой стране или страна не найдена
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationError'
+          examples:
+            invalid:
+              summary: Пустое название
+              value:
+                message: The given data was invalid
+                errors:
+                  name:
+                    - Field name is required
+            exists:
+              summary: Город уже существует в этой стране
+              value:
+                message: The given data was invalid
+                errors:
+                  name:
+                    - City already exists
+            countryNotFound:
+              summary: Страна не найдена
+              value:
+                message: The given data was invalid
+                errors:
+                  country_id:
+                    - Country not found
+    CityInUse:
+      description: Город используется в других записях, удаление запрещено
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: City is in use

@@ -9,14 +9,16 @@ import (
 
 	"icpo-backend/internal/api/httpx"
 	errs "icpo-backend/internal/errors"
+	rootdto "icpo-backend/internal/shared/dto"
 	"icpo-backend/internal/shared/refdata/dto"
+	"icpo-backend/pkg/autocomplete"
 	"icpo-backend/pkg/pagination"
 	"icpo-backend/pkg/sorting"
 	"icpo-backend/pkg/validator"
 )
 
 type Service[T any] interface {
-	GetList(ctx context.Context, p dto.ListParams) ([]T, int, error)
+	GetList(ctx context.Context, p rootdto.ListParams[struct{}]) ([]T, int, error)
 	Autocomplete(ctx context.Context, search string) ([]T, error)
 	Create(ctx context.Context, name string) (T, error)
 	Delete(ctx context.Context, id int64) error
@@ -52,20 +54,21 @@ func (h *handler[T]) GetAll(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	if sortParams.Field != "" && !IsSortableField(sortParams.Field) {
-		httpx.Error(w, http.StatusBadRequest, "unknown sort field "+sortParams.Field)
-		return
-	}
 
-	listParams := dto.ListParams{
-		Filter:     dto.FilterParams{Search: strings.TrimSpace(q.Get("search"))},
+	listParams := rootdto.ListParams[struct{}]{
+		Search:     strings.TrimSpace(q.Get("search")),
 		Pagination: paginationParams,
 		Sort:       sortParams,
 	}
 
 	list, total, err := h.service.GetList(r.Context(), listParams)
 	if err != nil {
-		httpx.ServerError(w, err)
+		switch {
+		case errors.Is(err, errs.ErrWrongSortField):
+			httpx.Error(w, http.StatusBadRequest, err.Error())
+		default:
+			httpx.ServerError(w, err)
+		}
 		return
 	}
 
@@ -88,7 +91,7 @@ func (h *handler[T]) Autocomplete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httpx.JSON(w, http.StatusOK, map[string]any{
-		"items": dto.ToAutocompleteResponses(items),
+		"items": autocomplete.ToAutocompleteResponses(items, dto.ToAutocompleteResponse),
 	})
 }
 
