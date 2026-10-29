@@ -3,8 +3,10 @@ package city
 import (
 	"context"
 	"errors"
+	"icpo-backend/internal/utils"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"icpo-backend/internal/api/handlers/city/dto"
@@ -38,17 +40,16 @@ func NewHandler(service Service) *handler {
 
 var ErrInvalidCountryID = errors.New("invalid country id")
 
-func parseFilterParams(r *http.Request) (cityDto.FilterParams, error) {
+func parseFilterParams(q url.Values) (cityDto.FilterParams, error) {
 	var f cityDto.FilterParams
 
-	countryID, ok, err := httpx.ParseQueryNumber(r, "country_id", false)
-	if err != nil {
-		return cityDto.FilterParams{}, err
-	}
-	if ok {
-		if countryID == 0 {
+	countryIDStr := q.Get("country_id")
+	if countryIDStr != "" {
+		countryID, err := utils.ParsePositiveInt64(countryIDStr)
+		if err != nil {
 			return cityDto.FilterParams{}, ErrInvalidCountryID
 		}
+
 		f.CountryID = countryID
 	}
 
@@ -76,7 +77,7 @@ func (h *handler) GetAll(w http.ResponseWriter, r *http.Request) {
 		Sort:       sortParams,
 	}
 
-	filter, err := parseFilterParams(r)
+	filter, err := parseFilterParams(q)
 	if err != nil {
 		httpx.Error(w, http.StatusBadRequest, err.Error())
 		return
@@ -103,9 +104,10 @@ func (h *handler) GetAll(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) Autocomplete(w http.ResponseWriter, r *http.Request) {
-	search := strings.TrimSpace(r.URL.Query().Get("search"))
+	q := r.URL.Query()
+	search := strings.TrimSpace(q.Get("search"))
 
-	filter, err := parseFilterParams(r)
+	filter, err := parseFilterParams(q)
 	if err != nil {
 		httpx.Error(w, http.StatusBadRequest, err.Error())
 		return
