@@ -36,6 +36,25 @@ func NewHandler(service Service) *handler {
 	}
 }
 
+var ErrInvalidCountryID = errors.New("invalid country id")
+
+func parseFilterParams(r *http.Request) (cityDto.FilterParams, error) {
+	var f cityDto.FilterParams
+
+	countryID, ok, err := httpx.ParseQueryNumber(r, "country_id", false)
+	if err != nil {
+		return cityDto.FilterParams{}, err
+	}
+	if ok {
+		if countryID == 0 {
+			return cityDto.FilterParams{}, ErrInvalidCountryID
+		}
+		f.CountryID = countryID
+	}
+
+	return f, nil
+}
+
 func (h *handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 
@@ -57,7 +76,7 @@ func (h *handler) GetAll(w http.ResponseWriter, r *http.Request) {
 		Sort:       sortParams,
 	}
 
-	filter, err := dto.ParseFilterParams(r)
+	filter, err := parseFilterParams(r)
 	if err != nil {
 		httpx.Error(w, http.StatusBadRequest, err.Error())
 		return
@@ -86,7 +105,7 @@ func (h *handler) GetAll(w http.ResponseWriter, r *http.Request) {
 func (h *handler) Autocomplete(w http.ResponseWriter, r *http.Request) {
 	search := strings.TrimSpace(r.URL.Query().Get("search"))
 
-	filter, err := dto.ParseFilterParams(r)
+	filter, err := parseFilterParams(r)
 	if err != nil {
 		httpx.Error(w, http.StatusBadRequest, err.Error())
 		return
