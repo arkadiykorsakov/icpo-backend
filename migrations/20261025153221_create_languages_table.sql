@@ -1,7 +1,7 @@
 -- +goose Up
 CREATE TABLE languages (
     id BIGSERIAL PRIMARY KEY,
-    name TEXT NOT NULL,
+    name VARCHAR(255) NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

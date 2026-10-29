@@ -3,12 +3,12 @@
 // ============================================================
 
 Table users {
-  id            BIGSERIAL   [pk]
-  email         TEXT        [not null, unique]
-  name          TEXT        [not null]
-  password_hash TEXT        [not null]
-  created_at    TIMESTAMPTZ [not null, default: `NOW()`]
-  updated_at    TIMESTAMPTZ [not null, default: `NOW()`]
+  id            BIGSERIAL    [pk]
+  email         VARCHAR(255) [not null, unique]
+  name          VARCHAR(255) [not null]
+  password_hash TEXT         [not null]
+  created_at    TIMESTAMPTZ  [not null, default: `NOW()`]
+  updated_at    TIMESTAMPTZ  [not null, default: `NOW()`]
 }
 
 Table refresh_tokens {
@@ -98,18 +98,18 @@ Table cities {
 // ============================================================
 
 Table criminals {
-  id             BIGSERIAL [pk]
-  last_name      TEXT      [not null]
-  first_name     TEXT      [not null]
-  nickname       TEXT
-  height_cm      INT
-  has_hair       BOOLEAN   [not null, default: true]
-  hair_color_id  BIGINT    [ref: >? hair_colors.id]
-  eye_color_id   BIGINT    [ref: >? eye_colors.id]
-  birth_date     DATE
-  birth_city_id  BIGINT    [ref: >? cities.id]
-  last_city_id   BIGINT    [ref: >? cities.id]
-  notes          TEXT
+  id            BIGSERIAL    [pk]
+  last_name     VARCHAR(255) [not null]
+  first_name    VARCHAR(255) [not null]
+  nickname      VARCHAR(255)
+  height_cm     INT
+  has_hair      BOOLEAN      [not null, default: true]
+  hair_color_id BIGINT       [ref: >? hair_colors.id]
+  eye_color_id  BIGINT       [ref: >? eye_colors.id]
+  birth_date    DATE
+  birth_city_id BIGINT       [ref: >? cities.id]
+  last_city_id  BIGINT       [ref: >? cities.id]
+  notes         TEXT
 
   Note: '''
   CHECK (height_cm IS NULL OR height_cm BETWEEN 30 AND 280)
@@ -138,9 +138,9 @@ Table criminals {
 // ============================================================
 
 Table criminal_languages {
-  criminal_id BIGINT [not null, ref: > criminals.id]
-  language_id BIGINT [not null, ref: > languages.id]
-  level       TEXT
+  criminal_id BIGINT      [not null, ref: > criminals.id]
+  language_id BIGINT      [not null, ref: > languages.id]
+  level       VARCHAR(2)
 
   indexes {
     (criminal_id, language_id) [pk]
@@ -164,7 +164,7 @@ Table citizenships {
 }
 
 Table criminal_crime_categories {
-  criminal_id      BIGINT [not null, ref: > criminals.id]
+  criminal_id       BIGINT [not null, ref: > criminals.id]
   crime_category_id BIGINT [not null, ref: > crime_categories.id]
 
   indexes {
