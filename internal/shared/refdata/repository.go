@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	errs "icpo-backend/internal/errors"
-	"icpo-backend/internal/shared/refdata/dto"
+	rootdto "icpo-backend/internal/shared/dto"
 	"icpo-backend/internal/utils"
 	"icpo-backend/pkg/pgerr"
 
@@ -16,18 +16,15 @@ import (
 
 const (
 	autocompleteLimit = 10
-	defaultSortField  = "name"
+
+	defaultSortField = "name"
+	defaultSortDir   = "ASC"
 )
 
-var sortableFields = map[string]struct{}{
-	"id":         {},
-	"name":       {},
-	"created_at": {},
-}
-
-func IsSortableField(field string) bool {
-	_, ok := sortableFields[field]
-	return ok
+var allowedSortFields = map[string]string{
+	"id":         "id",
+	"name":       "name",
+	"created_at": "created_at",
 }
 
 type repository[T any] struct {
@@ -49,27 +46,55 @@ func (r *repository[T]) table() string {
 	return pgx.Identifier{r.tableName}.Sanitize()
 }
 
-func (r *repository[T]) list(ctx context.Context, q querier, search, orderBy string, prefixFirst bool, limit, offset int64) ([]T, error) {
+func (r *repository[T]) list(
+	ctx context.Context,
+	q querier,
+	search, orderBy string,
+	prefixFirst bool,
+	limit, offset int64,
+) ([]T, error) {
 	var (
-		args   []any
-		filter string
+		args       []any
+		conditions []string
 	)
 
 	if search != "" {
 		esc := utils.EscapeLike(search)
+
 		args = append(args, "%"+esc+"%")
-		filter = fmt.Sprintf("WHERE name ILIKE $%d", len(args))
+		conditions = append(
+			conditions,
+			fmt.Sprintf("name ILIKE $%d", len(args)),
+		)
 
 		if prefixFirst {
 			args = append(args, esc+"%")
-			orderBy = fmt.Sprintf("CASE WHEN name ILIKE $%d THEN 0 ELSE 1 END, %s", len(args), orderBy)
+			orderBy = fmt.Sprintf(
+				"CASE WHEN name ILIKE $%d THEN 0 ELSE 1 END, %s",
+				len(args),
+				orderBy,
+			)
 		}
 	}
 
+	whereClause := ""
+	if len(conditions) > 0 {
+		whereClause = "WHERE " + strings.Join(conditions, " AND ")
+	}
+
 	args = append(args, limit, offset)
-	query := fmt.Sprintf(
-		`SELECT id, name, created_at FROM %s %s ORDER BY %s LIMIT $%d OFFSET $%d`,
-		r.table(), filter, orderBy, len(args)-1, len(args),
+
+	query := fmt.Sprintf(`
+        SELECT id, name, created_at
+        FROM %s
+        %s
+        ORDER BY %s
+        LIMIT $%d OFFSET $%d`,
+		r.table(),
+		whereClause,
+		orderBy,
+		len(args)-1,
+		len(args),
 	)
 
 	rows, err := q.Query(ctx, query, args...)
@@ -77,7 +102,10 @@ func (r *repository[T]) list(ctx context.Context, q querier, search, orderBy str
 		return nil, err
 	}
 
-	ptrs, err := pgx.CollectRows(rows, pgx.RowToAddrOfStructByName[T])
+	ptrs, err := pgx.CollectRows(
+		rows,
+		pgx.RowToAddrOfStructByName[T],
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -86,51 +114,74 @@ func (r *repository[T]) list(ctx context.Context, q querier, search, orderBy str
 	for i, p := range ptrs {
 		items[i] = *p
 	}
+
 	return items, nil
 }
 
-func (r *repository[T]) count(ctx context.Context, q querier, search string) (int, error) {
+func (r *repository[T]) count(
+	ctx context.Context,
+	q querier,
+	search string,
+) (int, error) {
 	var (
-		args   []any
-		filter string
+		args       []any
+		conditions []string
 	)
+
 	if search != "" {
 		esc := utils.EscapeLike(search)
 		args = append(args, "%"+esc+"%")
-		filter = "WHERE name ILIKE $1"
+		conditions = append(
+			conditions,
+			fmt.Sprintf("name ILIKE $%d", len(args)),
+		)
 	}
 
-	query := fmt.Sprintf(`SELECT COUNT(*) FROM %s %s`, r.table(), filter)
+	whereClause := ""
+	if len(conditions) > 0 {
+		whereClause = "WHERE " + strings.Join(conditions, " AND ")
+	}
+
+	query := fmt.Sprintf(
+		"SELECT COUNT(*) FROM %s %s",
+		r.table(),
+		whereClause,
+	)
 
 	var total int
-
 	if err := q.QueryRow(ctx, query, args...).Scan(&total); err != nil {
 		return 0, err
 	}
+
 	return total, nil
 }
 
 func (r *repository[T]) GetList(
 	ctx context.Context,
-	p dto.ListParams,
+	p rootdto.ListParams[struct{}],
 ) ([]T, int, error) {
 	limit := int64(p.Pagination.Limit())
 	offset := int64(p.Pagination.Offset())
 
-	field := defaultSortField
-	if IsSortableField(p.Sort.Field) {
-		field = p.Sort.Field
+	sortField := defaultSortField
+	if p.Sort.Field != "" {
+		var ok bool
+		sortField, ok = allowedSortFields[p.Sort.Field]
+		if !ok {
+			return nil, 0, fmt.Errorf("%w: %q", errs.ErrWrongSortField, p.Sort.Field)
+		}
 	}
-	dir := "ASC"
+
+	sortDir := defaultSortDir
 	if strings.EqualFold(string(p.Sort.Dir), "desc") {
-		dir = "DESC"
+		sortDir = "DESC"
 	}
-	orderBy := fmt.Sprintf("%s %s", field, dir)
-	if field != "id" {
+	orderBy := fmt.Sprintf("%s %s", sortField, sortDir)
+	if sortField != "id" {
 		orderBy += ", id ASC"
 	}
 
-	search := p.Filter.Search
+	search := p.Search
 
 	tx, err := r.db.BeginTx(ctx, pgx.TxOptions{
 		IsoLevel:   pgx.RepeatableRead,

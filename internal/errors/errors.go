@@ -13,7 +13,15 @@ var (
 	ErrRefDataExists   = errors.New("Ref data already exists")
 	ErrRefDataInUse    = errors.New("Ref data is in use")
 
+	ErrCityNotFound = errors.New("City not found")
+	ErrCityExists   = errors.New("City already exists")
+	ErrCityInUse    = errors.New("City is in use")
+
+	ErrCountryNotFound = errors.New("Country not found")
+
 	ErrInvalidToken = errors.New("Invalid token")
 
 	ErrUserIDMissing = errors.New("userID missing in context after Authenticate")
+
+	ErrWrongSortField = errors.New("Wrong sort field")
 )

@@ -5,11 +5,11 @@ import (
 	"strings"
 
 	errs "icpo-backend/internal/errors"
-	"icpo-backend/internal/shared/refdata/dto"
+	rootdto "icpo-backend/internal/shared/dto"
 )
 
 type Repository[T any] interface {
-	GetList(ctx context.Context, p dto.ListParams) ([]T, int, error)
+	GetList(ctx context.Context, p rootdto.ListParams[struct{}]) ([]T, int, error)
 	ExistsByName(ctx context.Context, name string) (bool, error)
 	Autocomplete(ctx context.Context, search string) ([]T, error)
 	Create(ctx context.Context, name string) (T, error)
@@ -24,7 +24,7 @@ func NewService[T any](repository Repository[T]) *service[T] {
 	return &service[T]{repository: repository}
 }
 
-func (s *service[T]) GetList(ctx context.Context, p dto.ListParams) ([]T, int, error) {
+func (s *service[T]) GetList(ctx context.Context, p rootdto.ListParams[struct{}]) ([]T, int, error) {
 	return s.repository.GetList(ctx, p)
 }
 
