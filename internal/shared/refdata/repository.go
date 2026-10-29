@@ -227,10 +227,10 @@ func (r *repository[T]) Create(ctx context.Context, name string) (T, error) {
 
 	// Ошибки сервера (в т.ч. нарушение уникальности) приходят при чтении строк.
 	item, err := pgx.CollectExactlyOneRow(rows, pgx.RowToAddrOfStructByName[T])
-	if pgerr.IsUniqueViolation(err, "") {
-		return zero, errs.ErrRefDataExists
-	}
 	if err != nil {
+		if pgerr.IsUniqueViolation(err, "") {
+			return zero, errs.ErrRefDataExists
+		}
 		return zero, err
 	}
 	return *item, nil
@@ -240,15 +240,16 @@ func (r *repository[T]) Delete(ctx context.Context, id int64) error {
 	query := fmt.Sprintf(`DELETE FROM %s WHERE id = $1`, r.table())
 
 	tag, err := r.db.Exec(ctx, query, id)
-	if pgerr.IsForeignKeyViolation(err) {
-		return errs.ErrRefDataInUse
-	}
 	if err != nil {
+		if pgerr.IsForeignKeyViolation(err) {
+			return errs.ErrRefDataInUse
+		}
 		return err
 	}
 	if tag.RowsAffected() == 0 {
 		return errs.ErrRefDataNotFound
 	}
+
 	return nil
 }
 

@@ -280,13 +280,13 @@ func (r *repository) Create(ctx context.Context, name string, countryID int64) (
 		&c.Country.CreatedAt,
 	)
 
-	if pgerr.IsUniqueViolation(err, uniqueNameCityIndex) {
-		return City{}, errs.ErrCityExists
-	}
-	if pgerr.IsForeignKeyViolation(err) {
-		return City{}, errs.ErrCountryNotFound
-	}
 	if err != nil {
+		if pgerr.IsUniqueViolation(err, uniqueNameCityIndex) {
+			return City{}, errs.ErrCityExists
+		}
+		if pgerr.IsForeignKeyViolation(err) {
+			return City{}, errs.ErrCountryNotFound
+		}
 		return City{}, err
 	}
 
@@ -298,10 +298,10 @@ func (r *repository) Delete(ctx context.Context, id int64) error {
 		DELETE FROM cities WHERE id = $1`
 
 	tag, err := r.db.Exec(ctx, query, id)
-	if pgerr.IsForeignKeyViolation(err) {
-		return errs.ErrCityInUse
-	}
 	if err != nil {
+		if pgerr.IsForeignKeyViolation(err) {
+			return errs.ErrCityInUse
+		}
 		return err
 	}
 	if tag.RowsAffected() == 0 {

@@ -42,10 +42,10 @@ func (r *repository) GetByEmail(ctx context.Context, email string) (User, error)
 	row := r.db.QueryRow(ctx, query, email)
 
 	u, err := scanUser(row)
-	if pgerr.IsNotFound(err) {
-		return User{}, errs.ErrUserNotFound
-	}
 	if err != nil {
+		if pgerr.IsNotFound(err) {
+			return User{}, errs.ErrUserNotFound
+		}
 		return User{}, err
 	}
 	return u, nil
@@ -75,10 +75,10 @@ func (r *repository) GetByID(ctx context.Context, id int64) (User, error) {
 	row := r.db.QueryRow(ctx, query, id)
 
 	u, err := scanUser(row)
-	if pgerr.IsNotFound(err) {
-		return User{}, errs.ErrUserNotFound
-	}
 	if err != nil {
+		if pgerr.IsNotFound(err) {
+			return User{}, errs.ErrUserNotFound
+		}
 		return User{}, err
 	}
 	return u, nil
@@ -93,10 +93,10 @@ func (r *repository) Create(ctx context.Context, candidate User, passwordHash st
 	row := r.db.QueryRow(ctx, query, candidate.Email, candidate.Name, passwordHash)
 
 	u, err := scanUser(row)
-	if pgerr.IsUniqueViolation(err, usersEmailKey) {
-		return User{}, errs.ErrEmailTaken
-	}
 	if err != nil {
+		if pgerr.IsUniqueViolation(err, usersEmailKey) {
+			return User{}, errs.ErrEmailTaken
+		}
 		return User{}, err
 	}
 	return u, nil
@@ -112,13 +112,13 @@ func (r *repository) Update(ctx context.Context, id int64, candidate User) (User
 	row := r.db.QueryRow(ctx, query, candidate.Email, candidate.Name, id)
 
 	u, err := scanUser(row)
-	if pgerr.IsNotFound(err) {
-		return User{}, errs.ErrUserNotFound
-	}
-	if pgerr.IsUniqueViolation(err, usersEmailKey) {
-		return User{}, errs.ErrEmailTaken
-	}
 	if err != nil {
+		if pgerr.IsNotFound(err) {
+			return User{}, errs.ErrUserNotFound
+		}
+		if pgerr.IsUniqueViolation(err, usersEmailKey) {
+			return User{}, errs.ErrEmailTaken
+		}
 		return User{}, err
 	}
 	return u, nil

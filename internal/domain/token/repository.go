@@ -37,10 +37,10 @@ func (r *repository) GetByHash(ctx context.Context, tokenHash string) (RefreshTo
 	err := r.db.QueryRow(ctx, query, tokenHash).Scan(
 		&rt.ID, &rt.UserID, &rt.TokenHash, &rt.ExpiresAt, &rt.RevokedAt,
 	)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return RefreshToken{}, errs.ErrInvalidToken
-	}
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return RefreshToken{}, errs.ErrInvalidToken
+		}
 		return RefreshToken{}, err
 	}
 	return rt, nil
