@@ -24,11 +24,20 @@ func GetIDFromRequest(w http.ResponseWriter, r *http.Request) (int64, error) {
 }
 
 func DecodeJSON(w http.ResponseWriter, r *http.Request, dst any) error {
-	defer r.Body.Close()
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 
-	if err := json.NewDecoder(r.Body).Decode(dst); err != nil {
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+
+	if err := dec.Decode(dst); err != nil {
 		Error(w, http.StatusBadRequest, "Invalid request body")
 		return err
 	}
+
+	if dec.More() {
+		Error(w, http.StatusBadRequest, "Request body must contain a single JSON object")
+		return errors.New("body contains multiple JSON values")
+	}
+
 	return nil
 }

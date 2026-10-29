@@ -194,7 +194,10 @@ func (r *repository) count(
 	return total, nil
 }
 
-func (r *repository) GetList(ctx context.Context, p rootdto.ListParams[dto.FilterParams]) ([]City, int, error) {
+func (r *repository) GetList(
+	ctx context.Context,
+	p rootdto.ListParams[dto.FilterParams],
+) ([]City, int, error) {
 	limit := int64(p.Pagination.Limit())
 	offset := int64(p.Pagination.Offset())
 
@@ -203,7 +206,11 @@ func (r *repository) GetList(ctx context.Context, p rootdto.ListParams[dto.Filte
 		var ok bool
 		sortField, ok = allowedSortFields[p.Sort.Field]
 		if !ok {
-			return nil, 0, fmt.Errorf("%w: %q", errs.ErrWrongSortField, p.Sort.Field)
+			return nil, 0, fmt.Errorf(
+				"%w: %q",
+				errs.ErrWrongSortField,
+				p.Sort.Field,
+			)
 		}
 	}
 
@@ -211,29 +218,38 @@ func (r *repository) GetList(ctx context.Context, p rootdto.ListParams[dto.Filte
 	if strings.EqualFold(string(p.Sort.Dir), "desc") {
 		sortDir = "DESC"
 	}
+
 	orderBy := fmt.Sprintf("%s %s", sortField, sortDir)
 	if sortField != colCityID {
 		orderBy += ", " + colCityID + " ASC"
 	}
 
-	search := p.Search
-
 	tx, err := r.db.BeginTx(ctx, pgx.TxOptions{
 		IsoLevel:   pgx.RepeatableRead,
 		AccessMode: pgx.ReadOnly,
 	})
-
 	if err != nil {
 		return nil, 0, err
 	}
-	defer tx.Rollback(ctx) // для read-only достаточно; после Commit это no-op
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
 
-	total, err := r.count(ctx, tx, search, p.Filter)
+	total, err := r.count(ctx, tx, p.Search, p.Filter)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	items, err := r.list(ctx, tx, search, p.Filter, orderBy, false, limit, offset)
+	items, err := r.list(
+		ctx,
+		tx,
+		p.Search,
+		p.Filter,
+		orderBy,
+		false,
+		limit,
+		offset,
+	)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -241,6 +257,7 @@ func (r *repository) GetList(ctx context.Context, p rootdto.ListParams[dto.Filte
 	if err := tx.Commit(ctx); err != nil {
 		return nil, 0, err
 	}
+
 	return items, total, nil
 }
 

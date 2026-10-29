@@ -34,6 +34,28 @@ curl http://localhost:8080/api/v1/health
 go build -o bin/api ./cmd/api
 ```
 
+## Проверка кода
+
+Для статического анализа Go-кода используется `golangci-lint` версии `v2.15.0`.
+
+Запуск проверки через `Makefile`:
+
+```bash
+make lint
+```
+
+Альтернативно можно запустить линтер напрямую в Docker из корня проекта:
+
+```bash
+docker run --rm -t -v "$(pwd):/app" -w /app \
+  --user "$(id -u):$(id -g)" \
+  -v "$(go env GOCACHE):/.cache/go-build" -e GOCACHE=/.cache/go-build \
+  -v "$(go env GOMODCACHE):/.cache/mod" -e GOMODCACHE=/.cache/mod \
+  -v "$HOME/.cache/golangci-lint:/.cache/golangci-lint" -e GOLANGCI_LINT_CACHE=/.cache/golangci-lint \
+  golangci/golangci-lint:v2.15.0 golangci-lint run
+```
+
+Проверка выполняется в соответствии с конфигурацией `golangci-lint`. Кэширование ускоряет повторные запуски, а запуск с UID и GID текущего пользователя помогает избежать создания файлов от `root` в рабочем каталоге.
 
 ## Конфигурация
 

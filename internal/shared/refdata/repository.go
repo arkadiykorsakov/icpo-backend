@@ -168,7 +168,11 @@ func (r *repository[T]) GetList(
 		var ok bool
 		sortField, ok = allowedSortFields[p.Sort.Field]
 		if !ok {
-			return nil, 0, fmt.Errorf("%w: %q", errs.ErrWrongSortField, p.Sort.Field)
+			return nil, 0, fmt.Errorf(
+				"%w: %q",
+				errs.ErrWrongSortField,
+				p.Sort.Field,
+			)
 		}
 	}
 
@@ -176,12 +180,11 @@ func (r *repository[T]) GetList(
 	if strings.EqualFold(string(p.Sort.Dir), "desc") {
 		sortDir = "DESC"
 	}
+
 	orderBy := fmt.Sprintf("%s %s", sortField, sortDir)
 	if sortField != "id" {
 		orderBy += ", id ASC"
 	}
-
-	search := p.Search
 
 	tx, err := r.db.BeginTx(ctx, pgx.TxOptions{
 		IsoLevel:   pgx.RepeatableRead,
@@ -190,14 +193,24 @@ func (r *repository[T]) GetList(
 	if err != nil {
 		return nil, 0, err
 	}
-	defer tx.Rollback(ctx) // для read-only достаточно; после Commit это no-op
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
 
-	total, err := r.count(ctx, tx, search)
+	total, err := r.count(ctx, tx, p.Search)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	items, err := r.list(ctx, tx, search, orderBy, false, limit, offset)
+	items, err := r.list(
+		ctx,
+		tx,
+		p.Search,
+		orderBy,
+		false,
+		limit,
+		offset,
+	)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -205,6 +218,7 @@ func (r *repository[T]) GetList(
 	if err := tx.Commit(ctx); err != nil {
 		return nil, 0, err
 	}
+
 	return items, total, nil
 }
 

@@ -17,7 +17,11 @@ func Up(ctx context.Context, databaseURL string) error {
 	if err != nil {
 		return fmt.Errorf("open db: %w", err)
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			slog.Error("close db", "error", err)
+		}
+	}()
 
 	provider, err := goose.NewProvider(goose.DialectPostgres, db, migrations.FS)
 	if err != nil {
@@ -33,8 +37,14 @@ func Up(ctx context.Context, databaseURL string) error {
 		slog.Info("migrations: no changes")
 		return nil
 	}
-	for _, r := range results {
-		slog.Info("migration applied", "name", r.Source.Path, "duration", r.Duration)
+
+	for _, result := range results {
+		slog.Info(
+			"migration applied",
+			"name", result.Source.Path,
+			"duration", result.Duration,
+		)
 	}
+
 	return nil
 }
